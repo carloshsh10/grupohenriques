@@ -1,0 +1,895 @@
+/* Reset e Estilos Gerais */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --cor-fundo-principal: #1a1a2e; /* Azul escuro quase preto */
+    --cor-fundo-secundario: #0f0017; /* Tom mais escuro para contraste */
+    --cor-card-fundo: #2a2a4a; /* Azul arroxeado escuro para cards */
+    --cor-texto-principal: #e0e0e0; /* Cinza claro para textos */
+    --cor-texto-secundario: #a0a0a0; /* Cinza médio para textos secundários */
+    --cor-destaque-primaria: #00bcd4; /* Ciano vibrante para destaque principal */
+    --cor-destaque-secundaria: #673ab7; /* Roxo suave para destaque secundário */
+    --cor-borda: rgba(255, 255, 255, 0.1);
+    --cor-sombra: rgba(0, 0, 0, 0.4);
+
+    --border-radius-padrao: 8px;
+    --transition-rapida: all 0.2s ease-in-out;
+    --transition-suave: all 0.3s ease-in-out;
+}
+
+body {
+    font-family: 'Roboto', sans-serif; /* Fonte moderna e limpa, se não tiver, Arial será fallback */
+    background-color: var(--cor-fundo-principal);
+    color: var(--cor-texto-principal);
+    line-height: 1.6;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Alinha o conteúdo ao topo */
+    min-height: 100vh;
+    padding: 20px; /* Adiciona um padding geral ao body */
+}
+
+/* Wrapper para o aplicativo inteiro, incluindo header e footer */
+.app-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1400px; /* Aumentar a largura máxima do app */
+    margin: 0 auto; /* Centraliza o wrapper */
+    background-color: var(--cor-card-fundo);
+    box-shadow: 0 10px 30px var(--cor-sombra);
+    border-radius: var(--border-radius-padrao);
+    overflow: hidden;
+    border: 1px solid var(--cor-borda);
+}
+
+/* Cabeçalho */
+header {
+    background-color: var(--cor-fundo-secundario);
+    color: var(--cor-texto-principal);
+    padding: 20px 30px;
+    border-bottom: 1px solid var(--cor-borda);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#company-logo {
+    width: 80px;
+    height: auto;
+    border: 2px solid var(--cor-destaque-primaria);
+    border-radius: 50%;
+    padding: 3px;
+    transition: var(--transition-suave);
+}
+
+#company-logo:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px var(--cor-destaque-primaria);
+}
+
+.company-info h1 {
+    font-size: 22px;
+    margin-bottom: 2px;
+    color: var(--cor-destaque-primaria);
+    font-weight: 500;
+}
+
+.company-info p {
+    font-size: 13px;
+    margin-bottom: 2px;
+    color: var(--cor-texto-secundario);
+}
+
+/* Container principal para navegação e conteúdo */
+.container {
+    display: flex;
+    flex-grow: 1; /* Permite que o container cresça */
+    min-height: calc(100vh - 200px); /* Ajuste de altura para considerar header/footer */
+}
+
+/* Navegação Lateral (Sidebar) */
+nav {
+    background-color: var(--cor-fundo-secundario);
+    padding: 20px 0;
+    border-right: 1px solid var(--cor-borda);
+    width: 220px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 10px var(--cor-sombra);
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+}
+
+nav li {
+    margin-bottom: 5px;
+}
+
+nav a {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    color: var(--cor-texto-principal);
+    text-decoration: none;
+    font-size: 16px;
+    transition: var(--transition-rapida);
+    border-left: 5px solid transparent;
+}
+
+nav a:hover,
+nav a.active {
+    background-color: rgba(0, 188, 212, 0.1);
+    color: var(--cor-destaque-primaria);
+    border-left-color: var(--cor-destaque-primaria);
+    transform: translateX(5px);
+}
+
+nav a i {
+    margin-right: 10px;
+    font-size: 18px;
+}
+
+/* Conteúdo Principal */
+main {
+    flex-grow: 1;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto; /* Adicionado para rolagem interna */
+    max-height: calc(100vh - 160px); /* Ajustar altura para evitar rolagem do body */
+}
+
+section {
+    display: none;
+    background-color: var(--cor-card-fundo);
+    padding: 25px;
+    border-radius: var(--border-radius-padrao);
+    box-shadow: 0 5px 15px var(--cor-sombra);
+    border: 1px solid var(--cor-borda);
+    margin-bottom: 20px;
+}
+
+section.active {
+    display: block;
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+h2 {
+    color: var(--cor-destaque-primaria);
+    font-size: 24px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid rgba(0, 188, 212, 0.3);
+    padding-bottom: 10px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+h2 i {
+    font-size: 28px;
+}
+
+h3 {
+    color: var(--cor-destaque-primaria);
+    font-size: 20px;
+    margin-bottom: 15px;
+    font-weight: 500;
+}
+
+
+/* Formulários */
+.form-group, .form-row {
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--cor-texto-principal);
+    font-size: 14px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="tel"],
+.form-group input[type="number"],
+.form-group input[type="date"],
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--border-radius-padrao);
+    background-color: var(--cor-fundo-secundario);
+    color: var(--cor-texto-principal);
+    font-size: 16px;
+    transition: var(--transition-rapida);
+    outline: none;
+}
+
+.form-group input[readonly] {
+    background-color: #333;
+    cursor: not-allowed;
+}
+
+/* Para que o date input mostre o texto branco */
+.form-group input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
+
+
+.form-group input[type="text"]:focus,
+.form-group input[type="email"]:focus,
+.form-group input[type="tel"]:focus,
+.form-group input[type="number"]:focus,
+.form-group input[type="date"]:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    border-color: var(--cor-destaque-primaria);
+    box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.2);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap; /* Adicionado para responsividade */
+}
+
+/* Botões */
+button, .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 25px;
+    border: none;
+    border-radius: var(--border-radius-padrao);
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: var(--transition-suave);
+    text-decoration: none;
+    color: white;
+    margin-right: 10px; /* Espaçamento padrão */
+    margin-bottom: 5px; /* Para responsividade, caso quebrem linha */
+}
+
+
+button i, .btn i {
+    margin-right: 8px;
+}
+
+.btn-primary {
+    background-color: var(--cor-destaque-primaria);
+    box-shadow: 0 4px 10px rgba(0, 188, 212, 0.3);
+}
+
+.btn-primary:hover {
+    background-color: #00acc1;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 188, 212, 0.4);
+}
+
+.btn-secondary {
+    background-color: var(--cor-destaque-secundaria);
+    box-shadow: 0 4px 10px rgba(103, 58, 183, 0.3);
+}
+
+.btn-secondary:hover {
+    background-color: #5e35b1;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(103, 58, 183, 0.4);
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(231, 76, 60, 0.4);
+}
+
+/* Botões de ação específicos (editar/excluir) e novos botões */
+.btn-editar, .btn-excluir, .btn-whatsapp, .btn-telegram, .btn-preview, .btn-faturamento, .btn-nfe {
+    padding: 8px 12px;
+    font-size: 13px;
+    margin-right: 5px;
+    min-width: 40px;
+    text-align: center;
+}
+.btn-editar:hover, .btn-excluir:hover, .btn-whatsapp:hover, .btn-telegram:hover, .btn-preview:hover, .btn-faturamento:hover, .btn-nfe:hover {
+    transform: translateY(-1px);
+}
+
+.btn-editar { background-color: #f39c12; }
+.btn-editar:hover { background-color: #e67e22; }
+
+.btn-excluir { background-color: #e74c3c; }
+.btn-excluir:hover { background-color: #c0392b; }
+
+.btn-whatsapp { background-color: #25D366; }
+.btn-whatsapp:hover { background-color: #1DA851; }
+
+.btn-telegram { background-color: #0088cc; }
+.btn-telegram:hover { background-color: #0077b3; }
+
+.btn-preview { background-color: #6c757d; } /* Cinza */
+.btn-preview:hover { background-color: #5a6268; }
+
+.btn-faturamento { background-color: #28a745; } /* Verde para faturamento */
+.btn-faturamento:hover { background-color: #218838; }
+
+.btn-nfe { background-color: #17a2b8; } /* Azul info para NFE */
+.btn-nfe:hover { background-color: #138496; }
+
+
+/* Tabelas */
+.table-container {
+    overflow-x: auto;
+    margin-top: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    background-color: var(--cor-fundo-secundario);
+    border-radius: var(--border-radius-padrao);
+    overflow: hidden; /* Para o border-radius funcionar nas células */
+}
+
+table th,
+table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--cor-borda);
+    color: var(--cor-texto-principal);
+    font-size: 14px; /* Leve redução para mais colunas */
+}
+
+table th {
+    background-color: rgba(0, 188, 212, 0.1);
+    color: var(--cor-destaque-primaria);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 12px; /* Leve redução */
+}
+
+table tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+table tbody tr:hover {
+    background-color: rgba(0, 188, 212, 0.05);
+    transition: var(--transition-rapida);
+}
+
+/* Seção de Orçamentos - Detalhes */
+.orcamento-details, .orcamento-item-list {
+    background-color: var(--cor-fundo-secundario);
+    padding: 20px;
+    border-radius: var(--border-radius-padrao);
+    border: 1px solid var(--cor-borda);
+    margin-bottom: 20px;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.orcamento-details p {
+    margin-bottom: 10px;
+    color: var(--cor-texto-secundario);
+    font-size: 15px;
+}
+
+.orcamento-details strong {
+    color: var(--cor-texto-principal);
+}
+
+/* Modal */
+.modal {
+    display: none; /* ISTO É CRÍTICO: DEVE SER NONE POR PADRÃO */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.6); /* Fundo escuro semitransparente */
+    backdrop-filter: blur(5px); /* Efeito de blur no fundo */
+    justify-content: center; /* Alinha o modal ao centro */
+    align-items: center; /* Alinha o modal ao centro */
+    animation: fadeInModal 0.3s ease-out;
+}
+
+.modal.active { /* Esta classe é adicionada via JS para mostrar o modal */
+    display: flex;
+}
+
+@keyframes fadeInModal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: var(--cor-card-fundo);
+    padding: 30px;
+    border-radius: var(--border-radius-padrao);
+    width: 90%;
+    max-width: 550px;
+    position: relative;
+    box-shadow: 0 15px 40px var(--cor-sombra);
+    border: 1px solid var(--cor-borda);
+    animation: slideInModal 0.4s ease-out;
+}
+
+#produtosCategoriaModal .modal-content {
+    max-width: 800px; /* Aumenta a largura do modal de produtos */
+}
+
+#produtos-categoria-modal-body {
+    max-height: 60vh; /* Define uma altura máxima baseada na tela */
+    overflow-y: auto; /* Adiciona a barra de rolagem quando necessário */
+    padding-right: 10px; /* Espaço para a barra de rolagem */
+}
+
+/* Estilo da barra de rolagem para o corpo do modal de produtos */
+#produtos-categoria-modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+#produtos-categoria-modal-body::-webkit-scrollbar-track {
+  background: var(--cor-fundo-secundario);
+  border-radius: 4px;
+}
+#produtos-categoria-modal-body::-webkit-scrollbar-thumb {
+  background-color: var(--cor-destaque-secundaria);
+  border-radius: 4px;
+}
+#produtos-categoria-modal-body::-webkit-scrollbar-thumb:hover {
+  background-color: var(--cor-destaque-primaria);
+}
+
+
+/* Tabela compacta dentro do modal de produtos */
+#produtosCategoriaModal .table-container table th,
+#produtosCategoriaModal .table-container table td {
+    padding: 10px 12px;
+    font-size: 14px;
+}
+
+@keyframes slideInModal {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.close-modal {
+    color: var(--cor-texto-secundario);
+    position: absolute;
+    right: 20px;
+    top: 15px;
+    font-size: 32px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: var(--transition-rapida);
+}
+
+.close-modal:hover {
+    color: var(--cor-destaque-primaria);
+    transform: rotate(90deg);
+}
+
+/* Estilos para a seção de backup */
+.backup-actions {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.backup-actions button, .backup-actions label {
+    flex: 1;
+    min-width: 220px;
+    padding: 15px;
+}
+
+
+.backup-status-info {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 15px;
+    color: var(--cor-texto-secundario);
+}
+
+#backup-status {
+    font-weight: bold;
+    color: var(--cor-destaque-primaria);
+}
+
+#ultimo-backup {
+    font-style: italic;
+    color: var(--cor-texto-secundario);
+}
+
+/* Rodapé */
+footer {
+    text-align: center;
+    padding: 20px;
+    background-color: var(--cor-fundo-secundario);
+    color: var(--cor-texto-secundario);
+    border-top-left-radius: 0; /* Remove border radius da parte superior */
+    border-top-right-radius: 0;
+    border-bottom-left-radius: var(--border-radius-padrao); /* Mantém na parte inferior */
+    border-bottom-right-radius: var(--border-radius-padrao);
+    margin-top: auto; /* Empurra o rodapé para o final do wrapper */
+    font-size: 14px;
+    border-top: 1px solid var(--cor-borda);
+    box-shadow: 0 -5px 15px var(--cor-sombra);
+}
+
+/* Utilitários */
+.text-center {
+    text-align: center;
+}
+
+.mt-20 {
+    margin-top: 20px;
+}
+
+.mb-20 {
+    margin-bottom: 20px;
+}
+
+/* Estilos Específicos para Tabela de Itens do Orçamento */
+#orcamento-itens-tabela th:nth-child(4),
+#orcamento-itens-tabela td:nth-child(4) {
+    text-align: right;
+}
+
+#orcamento-itens-tabela th:last-child,
+#orcamento-itens-tabela td:last-child {
+    text-align: center;
+    width: 100px; /* Ajustado para acomodar botões */
+}
+
+/* Estilos para as listas genéricas (Orçamentos, Faturamentos, NFE) */
+#lista-orcamentos, #lista-faturamentos-gerados, #lista-nfe-anexadas {
+    list-style: none;
+    padding: 0;
+}
+
+#lista-orcamentos li, #lista-faturamentos-gerados .list-item, #lista-nfe-anexadas .list-item {
+    background-color: var(--cor-fundo-secundario);
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--border-radius-padrao);
+    margin-bottom: 10px;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: var(--transition-rapida);
+}
+
+#lista-orcamentos li:hover, #lista-faturamentos-gerados .list-item:hover, #lista-nfe-anexadas .list-item:hover {
+    background-color: rgba(0, 188, 212, 0.05);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+#lista-orcamentos li span, #lista-faturamentos-gerados .list-item span, #lista-nfe-anexadas .list-item span {
+    font-weight: 500;
+    color: var(--cor-destaque-primaria);
+    flex-grow: 1; /* Para o texto ocupar espaço e empurrar os botões */
+}
+
+#lista-orcamentos li div, #lista-faturamentos-gerados .list-item div, #lista-nfe-anexadas .list-item div { /* Container dos botões */
+    display: flex;
+    gap: 5px; /* Reduzido gap */
+    flex-shrink: 0; /* Para não encolher os botões */
+    align-items: center;
+}
+#lista-orcamentos li div button, #lista-faturamentos-gerados .list-item div button, #lista-nfe-anexadas .list-item div button {
+    margin-right: 0; /* Remover margem direita individual dos botões dentro desta div */
+}
+
+
+/* === NOVOS ESTILOS PARA ABA NOTA FORNECEDOR === */
+#nfe-management-panel {
+    margin-top: 25px;
+    background-color: var(--cor-fundo-secundario);
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--border-radius-padrao);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.nfe-placeholder {
+    color: var(--cor-texto-secundario);
+    text-align: center;
+    padding: 40px;
+    font-style: italic;
+    border: 2px dashed var(--cor-borda);
+    border-radius: var(--border-radius-padrao);
+}
+
+.nfe-input-group {
+    background-color: var(--cor-card-fundo);
+    padding: 15px;
+    border-radius: var(--border-radius-padrao);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nfe-input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--cor-destaque-primaria);
+}
+
+.nfe-input-group input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--border-radius-padrao);
+    background-color: var(--cor-fundo-secundario);
+    color: var(--cor-texto-principal);
+    font-size: 15px;
+    transition: var(--transition-rapida);
+    outline: none;
+    margin-bottom: 10px; /* Espaço entre os inputs */
+}
+
+.nfe-input-group input[type="text"]:focus {
+    border-color: var(--cor-destaque-primaria);
+    box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.2);
+}
+
+.nfe-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end; /* Alinha botões à direita */
+    flex-wrap: wrap; /* Permite quebrar linha em telas pequenas */
+    margin-top: 10px;
+}
+
+.nfe-actions button {
+    padding: 8px 12px;
+    font-size: 13px;
+    margin: 0;
+}
+/* === FIM DOS NOVOS ESTILOS === */
+
+
+/* Estilos para Categorias de Produtos */
+#categorias-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.categoria-card {
+    background-color: var(--cor-fundo-secundario);
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--border-radius-padrao);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition-suave);
+    box-shadow: 0 2px 8px var(--cor-sombra);
+}
+
+.categoria-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px var(--cor-sombra);
+    border-color: var(--cor-destaque-primaria);
+}
+
+.categoria-card h4 {
+    color: var(--cor-destaque-primaria);
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+.categoria-card p {
+    font-size: 14px;
+    color: var(--cor-texto-secundario);
+}
+
+/* Faturamento - Parcelas */
+.parcela-row {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: var(--cor-fundo-secundario);
+    border-radius: var(--border-radius-padrao);
+}
+.parcela-row .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+.parcela-row .btn-danger {
+    padding: 10px;
+    height: 48px; /* Alinha com a altura do input */
+}
+
+
+/* Responsividade Básica */
+@media (max-width: 992px) {
+    .app-wrapper {
+        border-radius: 0; /* Remove bordas arredondadas em telas menores */
+        box-shadow: none;
+        height: 100vh;
+    }
+
+    body {
+        padding: 0; /* Remove padding do body em telas menores */
+    }
+
+    .container {
+        flex-direction: column;
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+        flex-grow: 1;
+        overflow-y: hidden;
+    }
+     main {
+        max-height: none; /* Remove a altura máxima para permitir rolagem */
+    }
+
+    nav {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--cor-borda);
+        flex-direction: row;
+        justify-content: flex-start; /* Alinha ao início para rolagem */
+        overflow-x: auto;
+        padding: 10px 0;
+        flex-shrink: 0;
+    }
+
+    nav ul {
+        display: flex;
+        flex-wrap: nowrap;
+    }
+
+    nav li {
+        margin-bottom: 0;
+        flex-shrink: 0;
+    }
+
+    nav a {
+        padding: 10px 15px;
+        border-left: none;
+        border-bottom: 3px solid transparent;
+    }
+
+    nav a:hover,
+    nav a.active {
+        border-bottom-color: var(--cor-destaque-primaria);
+        border-left-color: transparent;
+        transform: translateY(0);
+    }
+
+    main {
+        padding: 20px;
+    }
+
+    header {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+
+    .logo-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    footer {
+        border-radius: 0;
+    }
+
+    #lista-orcamentos li, #lista-faturamentos-gerados .list-item, #lista-nfe-anexadas .list-item {
+        flex-direction: column; /* Empilha texto e botões em telas menores */
+        align-items: flex-start;
+        gap: 10px;
+    }
+    #lista-orcamentos li div, #lista-faturamentos-gerados .list-item div, #lista-nfe-anexadas .list-item div {
+        width: 100%;
+        justify-content: flex-start; /* Alinha botões à esquerda */
+    }
+    .btn-editar, .btn-excluir, .btn-whatsapp, .btn-telegram, .btn-preview, .btn-faturamento, .btn-nfe {
+        padding: 8px 10px; /* Ajuste fino */
+        font-size: 12px;
+    }
+     #categorias-container {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .company-info h1 {
+        font-size: 20px;
+    }
+
+    .company-info p {
+        font-size: 12px;
+    }
+
+    h2 {
+        font-size: 20px;
+    }
+
+    button, .btn {
+        padding: 10px 15px; /* Reduzido padding */
+        font-size: 14px;
+        margin-right: 5px; /* Ajuste para botões */
+    }
+
+    .backup-actions {
+        flex-direction: column;
+    }
+
+    .backup-actions button, .backup-actions label {
+        min-width: unset;
+        width: 100%;
+    }
+
+    table th,
+    table td {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+
+    .modal-content {
+        padding: 20px;
+        width: 95%;
+    }
+    #produtosCategoriaModal .modal-content {
+        max-width: 95%; 
+    }
+    #categorias-container {
+        grid-template-columns: 1fr; /* Uma coluna em telas muito pequenas */
+    }
+    .parcela-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

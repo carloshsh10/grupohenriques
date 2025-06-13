@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GRUPO HENRIQUES - Sistema de Orçamentos</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f0017">
+    <link rel="apple-touch-icon" href="assets/logo.png">
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="shortcut icon" href="assets/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <div class="app-wrapper">
+        <header>
+            <div class="logo-container">
+                <img src="assets/logo.png" alt="GRUPO HENRIQUES Logo" id="company-logo">
+                <div class="company-info">
+                    <h1>GRUPO HENRIQUES</h1>
+                    <p>SEGURANÇA ELETRÔNICA</p>
+                    <p>Contato: 24 99223-2018 / 24 99296-9844</p>
+                    <p>CNPJ: 22.827.727/0001-80</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="container">
+            <nav>
+                <ul>
+                    <li><a href="#" id="nav-clientes"><i class="fas fa-users"></i> Clientes</a></li>
+                    <li><a href="#" id="nav-produtos"><i class="fas fa-box-open"></i> Produtos</a></li>
+                    <li><a href="#" id="nav-orcamentos"><i class="fas fa-file-invoice-dollar"></i> Orçamentos</a></li>
+                    <li><a href="#" id="nav-faturamento"><i class="fas fa-cash-register"></i> Faturamento</a></li>
+                    <li><a href="#" id="nav-nota-fornecedor"><i class="fas fa-receipt"></i> Nota Fornecedor</a></li>
+                    <li><a href="#" id="nav-backup"><i class="fas fa-cloud-upload-alt"></i> Backup & Restore</a></li>
+                </ul>
+            </nav>
+
+            <main>
+                <section id="clientes-section" class="active">
+                    <h2><i class="fas fa-users"></i> Gerenciar Clientes</h2>
+                    <form id="cliente-form">
+                        <input type="hidden" id="cliente-id">
+                        <div class="form-group">
+                            <label for="cliente-nome">Nome:</label>
+                            <input type="text" id="cliente-nome" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cliente-email">E-mail:</label>
+                            <input type="email" id="cliente-email">
+                        </div>
+                        <div class="form-group">
+                            <label for="cliente-telefone">Telefone:</label>
+                            <input type="tel" id="cliente-telefone">
+                        </div>
+                        <div class="form-group">
+                            <label for="cliente-endereco">Endereço:</label>
+                            <input type="text" id="cliente-endereco">
+                        </div>
+                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Cliente</button>
+                    </form>
+                    <div class="table-container">
+                        <table id="clientes-tabela">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>E-mail</th>
+                                    <th>Telefone</th>
+                                    <th>Endereço</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section id="produtos-section">
+                    <h2><i class="fas fa-box-open"></i> Gerenciar Produtos</h2>
+                    <form id="produto-form">
+                        <input type="hidden" id="produto-id">
+                        <div class="form-group">
+                            <label for="produto-nome-proposta">Nome para Proposta:</label>
+                            <input type="text" id="produto-nome-proposta" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="produto-nome-real">Nome Real (Interno):</label>
+                            <input type="text" id="produto-nome-real">
+                        </div>
+                        <div class="form-group">
+                            <label for="produto-categoria">Categoria:</label>
+                            <input type="text" id="produto-categoria" placeholder="Ex: CFTV, Alarmes, Cabos">
+                        </div>
+                        <div class="form-group">
+                            <label for="produto-valor">Valor (R$):</label>
+                            <input type="number" id="produto-valor" step="0.01" min="0" required>
+                        </div>
+                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Produto</button>
+                    </form>
+                    
+                    <h3 class="mt-20">Categorias de Produtos</h3>
+                    <div id="categorias-container">
+                        </div>
+                </section>
+
+                <section id="orcamentos-section">
+                    <h2><i class="fas fa-file-invoice-dollar"></i> Gerenciar Orçamentos</h2>
+                    <form id="orcamento-form">
+                        <div class="form-group">
+                            <label for="orcamento-cliente">Cliente:</label>
+                            <select id="orcamento-cliente" required>
+                                <option value="">Selecione um cliente...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="orcamento-servicos">Descrição dos Serviços (para o PDF):</label>
+                            <input type="text" id="orcamento-servicos" placeholder="Ex: Instalação de sistema de CFTV completo">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="orcamento-mao-de-obra">Valor Mão de Obra (R$):</label>
+                            <input type="number" id="orcamento-mao-de-obra" step="0.01" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="orcamento-relatorio">Relatório/Observações:</label>
+                            <textarea id="orcamento-relatorio" rows="4"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="orcamento-formas-pagamento">Formas de Pagamento:</label>
+                            <textarea id="orcamento-formas-pagamento" rows="2"></textarea>
+                        </div>
+                        <button type="button" id="adicionar-item-btn" class="btn-secondary"><i class="fas fa-plus-circle"></i> Adicionar Item</button>
+                        <button type="button" id="gerar-pdf-btn" class="btn-primary"><i class="fas fa-file-pdf"></i> Gerar PDF</button>
+                        <button type="button" id="salvar-orcamento-btn" class="btn-primary"><i class="fas fa-save"></i> Salvar Orçamento</button>
+                        <button type="button" id="novo-orcamento-btn" class="btn-secondary"><i class="fas fa-file-alt"></i> Novo Orçamento</button>
+                    </form>
+
+                    <h3>Itens do Orçamento</h3>
+                    <div class="table-container">
+                        <table id="orcamento-itens-tabela">
+                            <thead>
+                                <tr>
+                                    <th>Produto/Serviço</th>
+                                    <th>Quantidade</th>
+                                    <th>Valor UND</th>
+                                    <th>Total Item</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="orcamento-details mt-20">
+                        <p><strong>Total de Produtos:</strong> <span id="total-produtos">R$ 0,00</span></p>
+                        <p><strong>Total Geral (com Mão de Obra):</strong> <span id="total-geral">R$ 0,00</span></p>
+                    </div>
+
+                    <h3 class="mt-20">Orçamentos Salvos</h3>
+                    <ul id="lista-orcamentos">
+                    </ul>
+                </section>
+                
+                <section id="faturamento-section">
+                    <h2><i class="fas fa-cash-register"></i> Gerar Faturamento</h2>
+                    <form id="faturamento-form">
+                        <div class="form-group">
+                            <label for="faturamento-orcamento-vinculado">Vincular a um Orçamento Salvo:</label>
+                            <select id="faturamento-orcamento-vinculado" required>
+                                <option value="">Selecione um orçamento...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="faturamento-cliente">Cliente:</label>
+                            <input type="text" id="faturamento-cliente-nome" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="faturamento-local">Local do Serviço:</label>
+                            <input type="text" id="faturamento-local" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="faturamento-tipo-servico">Tipo do Serviço:</label>
+                            <input type="text" id="faturamento-tipo-servico" placeholder="Ex: Instalação de CFTV, Manutenção de Alarmes" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="faturamento-entrada">Valor de Entrada (R$):</label>
+                            <input type="number" id="faturamento-entrada" step="0.01" min="0" value="0">
+                        </div>
+
+                        <h3 class="mt-20">Parcelas</h3>
+                        <div id="faturamento-parcelas-container">
+                            </div>
+                        <button type="button" id="add-parcela-btn" class="btn-secondary"><i class="fas fa-plus"></i> Adicionar Parcela</button>
+                        
+                        <div class="form-actions mt-20">
+                             <button type="button" id="gerar-faturamento-pdf-btn" class="btn-primary"><i class="fas fa-file-pdf"></i> Gerar e Salvar Faturamento</button>
+                        </div>
+                    </form>
+                    <h3 class="mt-20">Faturamentos Gerados</h3>
+                    <div id="lista-faturamentos-gerados">
+                        </div>
+                </section>
+
+                <section id="nota-fornecedor-section">
+                    <h2><i class="fas fa-receipt"></i> Gerenciar Notas de Fornecedor</h2>
+                    <form id="nfe-form">
+                         <div class="form-group">
+                            <label for="nfe-orcamento-vinculado">Selecione o Orçamento para Gerenciar as NF-e:</label>
+                            <select id="nfe-orcamento-vinculado" required>
+                                <option value="">Selecione um orçamento...</option>
+                            </select>
+                        </div>
+
+                        <div id="nfe-management-panel">
+                        </div>
+                    </form>
+                </section>
+
+                <section id="backup-section">
+                    <h2><i class="fas fa-cloud-upload-alt"></i> Backup & Restore</h2>
+                    <p class="mb-20" style="color: var(--cor-destaque-primaria); text-align: center; border: 1px solid var(--cor-destaque-secundaria); padding: 10px; border-radius: 5px;">
+                        <strong>IMPORTANTE:</strong> Seus dados são salvos no seu navegador. Faça backups regularmente para não perder suas informações.
+                    </p>
+                    <div class="backup-actions">
+                        <button id="exportar-backup-btn" class="btn-primary"><i class="fas fa-download"></i> Exportar Backup</button>
+                        <label for="importar-backup-file" class="btn btn-secondary">
+                            <i class="fas fa-upload"></i> Importar Backup
+                            <input type="file" id="importar-backup-file" accept=".json" style="display: none;">
+                        </label>
+                    </div>
+
+                    <div class="backup-status-info mt-20">
+                        <p>Status: <span id="backup-status">Pronto</span></p>
+                        <p>Último Backup: <span id="ultimo-backup">Nenhum</span></p>
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <footer>
+            <p>&copy; <span id="current-year">2024</span> GRUPO HENRIQUES - Segurança Eletrônica. Todos os direitos reservados.</p>
+        </footer>
+    </div>
+
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>Adicionar Item ao Orçamento</h3>
+            <form id="item-form">
+                <input type="hidden" id="modal-item-index">
+                <div class="form-group">
+                    <label for="modal-item-categoria">Categoria:</label>
+                    <select id="modal-item-categoria">
+                        <option value="">Selecione uma categoria...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="modal-produto">Produto/Serviço:</label>
+                    <select id="modal-produto" required>
+                        <option value="">Selecione um produto...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="modal-quantidade">Quantidade:</label>
+                    <input type="number" id="modal-quantidade" min="1" value="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="modal-valor">Valor UND (R$):</label>
+                    <input type="number" id="modal-valor" step="0.01" min="0" required>
+                </div>
+                <button type="submit" class="btn-primary"><i class="fas fa-plus-circle"></i> Adicionar Item</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="produtosCategoriaModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="close-produtos-categoria-modal">&times;</span>
+            <h3 id="produtos-categoria-modal-title">Produtos da Categoria</h3>
+            <div id="produtos-categoria-modal-body">
+                </div>
+        </div>
+    </div>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        // Tornar jsPDF disponível globalmente
+        window.jsPDF = window.jspdf.jsPDF;
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+    </script>
+    <script src="script.js"></script>
+    <script src="pdf-generator.js"></script>
+    <script src="backup.js"></script>
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker: Registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker: Registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
