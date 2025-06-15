@@ -297,7 +297,8 @@
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+        // IMPORTANTE: Adicione 'collection' e 'doc' para Firestore
+        import { getFirestore, doc, setDoc, getDoc, collection } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -318,13 +319,18 @@
         window.jsPDF = window.jspdf.jsPDF;
         document.getElementById('current-year').textContent = new Date().getFullYear();
 
-        // Pass Firebase instances to the global scope or to script.js via a setup function
+        // Pass Firebase instances AND functions to the global scope or to script.js via a setup function
         window.firebaseAuth = auth;
         window.firebaseDb = db;
         window.GoogleAuthProvider = GoogleAuthProvider;
         window.signInWithPopup = signInWithPopup;
         window.signOut = signOut;
         window.onAuthStateChanged = onAuthStateChanged;
+        // IMPORTANTE: Passe as funções 'doc', 'setDoc', 'getDoc', 'collection'
+        window.firebaseDoc = doc;
+        window.firebaseSetDoc = setDoc;
+        window.firebaseGetDoc = getDoc;
+        window.firebaseCollection = collection;
 
     </script>
     <script src="script.js"></script>
