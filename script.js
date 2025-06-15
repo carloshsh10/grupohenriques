@@ -21,6 +21,7 @@ let editingItemIndex = -1;
 // Firebase variables
 let firebaseUser = null;
 const firebaseStatusElement = document.getElementById('firebase-status');
+const googleLoginBtn = document.getElementById('google-login-btn');
 
 // Inicialização do aplicativo
 document.addEventListener('DOMContentLoaded', function() {
@@ -51,8 +52,12 @@ function configurarEventListeners() {
     // Formulários com Salvamento Automático
     document.getElementById('cliente-form').addEventListener('input', salvarCliente);
     document.getElementById('cliente-form').addEventListener('submit', (e) => e.preventDefault()); // Prevenir envio padrão
+    document.getElementById('novo-cliente-btn').addEventListener('click', novoCliente);
+
     document.getElementById('produto-form').addEventListener('input', salvarProduto);
     document.getElementById('produto-form').addEventListener('submit', (e) => e.preventDefault());
+    document.getElementById('novo-produto-btn').addEventListener('click', novoProduto);
+
 
     // Orçamento
     document.getElementById('orcamento-form').addEventListener('input', salvarDadosOrcamento);
@@ -90,6 +95,8 @@ function configurarEventListeners() {
     document.getElementById('add-parcela-btn').addEventListener('click', adicionarParcela);
     document.getElementById('gerar-faturamento-pdf-btn').addEventListener('click', gerarEAnexarFaturamento);
     document.getElementById('faturamento-orcamento-vinculado').addEventListener('change', preencherClienteFaturamento);
+    document.getElementById('novo-faturamento-btn').addEventListener('click', novoFaturamento);
+
 
     // Nota Fornecedor - Event Listeners atualizados
     document.getElementById('nfe-orcamento-vinculado').addEventListener('change', carregarChavesNFEParaOrcamentoSelecionado);
@@ -115,11 +122,17 @@ function configurarEventListeners() {
     });
 
     // Backup
-    document.getElementById('importar-backup-file').addEventListener('change', handleFileUpload);
+    document.getElementById('exportar-backup-btn').addEventListener('click', exportData); // Assumindo que exportData está em backup.js
+    document.getElementById('importar-backup-file').addEventListener('change', handleFileUpload); // Assumindo que handleFileUpload está em backup.js
 
     // Firebase Login/Logout
-    document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
-    document.getElementById('google-logout-btn').addEventListener('click', signOutGoogle);
+    googleLoginBtn.addEventListener('click', function() {
+        if (firebaseUser) {
+            signOutGoogle();
+        } else {
+            signInWithGoogle();
+        }
+    });
 }
 
 // Funções Firebase
@@ -130,7 +143,7 @@ async function signInWithGoogle() {
         // onAuthStateChanged will handle the UI update and data loading
     } catch (error) {
         console.error("Erro no login com Google: ", error);
-        updateFirebaseStatus('Erro de Conexão Firebase', 'red');
+        updateFirebaseStatus('Erro de Conexão Firebase', 'red', 'Login Google Necessário');
         alert("Erro ao fazer login com Google: " + error.message);
     }
 }
@@ -141,7 +154,7 @@ async function signOutGoogle() {
         // onAuthStateChanged will handle the UI update and data loading
     } catch (error) {
         console.error("Erro no logout: ", error);
-        updateFirebaseStatus('Erro ao Desconectar', 'red');
+        updateFirebaseStatus('Erro ao Desconectar', 'red', 'Login Google Necessário');
         alert("Erro ao fazer logout: " + error.message);
     }
 }
@@ -150,15 +163,15 @@ function setupFirebaseAuthStateListener() {
     window.onAuthStateChanged(window.firebaseAuth, async (user) => {
         if (user) {
             firebaseUser = user;
-            updateFirebaseStatus('Conectado', 'green');
-            document.getElementById('google-login-btn').style.display = 'none';
-            document.getElementById('google-logout-btn').style.display = 'inline-block';
+            updateFirebaseStatus('Logado com Firebase Cloud', 'green', 'Logado com Firebase Cloud');
+            googleLoginBtn.classList.remove('btn-danger'); // Remove red style
+            googleLoginBtn.classList.add('btn-success'); // Add green style
             await loadDataFromFirestore();
         } else {
             firebaseUser = null;
-            updateFirebaseStatus('Desconectado', 'gray');
-            document.getElementById('google-login-btn').style.display = 'inline-block';
-            document.getElementById('google-logout-btn').style.display = 'none';
+            updateFirebaseStatus('Login Google Necessário', 'red', 'Login Google Necessário');
+            googleLoginBtn.classList.remove('btn-success'); // Remove green style
+            googleLoginBtn.classList.add('btn-danger'); // Add red style
             // Optionally clear data or load from local storage if not logged in
             loadDataFromLocalStorage();
         }
@@ -176,21 +189,20 @@ async function saveDataToFirestore() {
         return;
     }
 
-    updateFirebaseStatus('Conectando...', 'orange');
+    updateFirebaseStatus('Conectando...', 'orange', 'Conectando...');
     try {
-        // Correção aqui: usar window.firebaseDoc com window.firebaseDb
-        const userDocRef = window.firebaseDoc(window.firebaseDb, 'users', firebaseUser.uid);
-        await window.firebaseSetDoc(userDocRef, {
+        const userDocRef = window.firebaseDb.collection('users').doc(firebaseUser.uid);
+        await window.setDoc(userDocRef, {
             clientes: clientes,
             produtos: produtos,
             orcamentos: orcamentos,
             proximoOrcamentoId: proximoOrcamentoId,
             currentOrcamento: currentOrcamento
         });
-        updateFirebaseStatus('Banco de Dados Salvo com Sucesso!', 'green');
+        updateFirebaseStatus('Banco de Dados Salvo com Sucesso!', 'green', 'Logado com Firebase Cloud');
     } catch (error) {
         console.error("Erro ao salvar dados no Firestore: ", error);
-        updateFirebaseStatus('Erro de Conexão Firebase', 'red');
+        updateFirebaseStatus('Erro de Conexão Firebase', 'red', 'Login Google Necessário');
         alert("Erro ao salvar dados no Firebase. Verifique sua conexão ou tente novamente.");
     }
 }
@@ -202,11 +214,10 @@ async function loadDataFromFirestore() {
         return;
     }
 
-    updateFirebaseStatus('Conectando...', 'orange');
+    updateFirebaseStatus('Conectando...', 'orange', 'Conectando...');
     try {
-        // Correção aqui: usar window.firebaseDoc com window.firebaseDb
-        const userDocRef = window.firebaseDoc(window.firebaseDb, 'users', firebaseUser.uid);
-        const docSnap = await window.firebaseGetDoc(userDocRef);
+        const userDocRef = window.firebaseDb.collection('users').doc(firebaseUser.uid);
+        const docSnap = await window.getDoc(userDocRef);
 
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -254,9 +265,9 @@ async function loadDataFromFirestore() {
             });
 
 
-            updateFirebaseStatus('Dados Carregados do Firebase!', 'green');
+            updateFirebaseStatus('Dados Carregados do Firebase!', 'green', 'Logado com Firebase Cloud');
         } else {
-            updateFirebaseStatus('Nenhum dado no Firebase, começando com vazio.', 'blue');
+            updateFirebaseStatus('Nenhum dado no Firebase, começando com vazio.', 'blue', 'Login Google Necessário');
             clientes = [];
             produtos = [];
             orcamentos = [];
@@ -276,15 +287,23 @@ async function loadDataFromFirestore() {
         carregarDadosIniciais(); // Renderiza a UI com os dados carregados
     } catch (error) {
         console.error("Erro ao carregar dados do Firestore: ", error);
-        updateFirebaseStatus('Erro de Conexão Firebase', 'red');
+        updateFirebaseStatus('Erro de Conexão Firebase', 'red', 'Login Google Necessário');
         alert("Erro ao carregar dados do Firebase. Carregando dados locais. " + error.message);
         loadDataFromLocalStorage(); // Fallback to local storage
     }
 }
 
-function updateFirebaseStatus(message, color) {
+function updateFirebaseStatus(message, color, buttonText) {
     firebaseStatusElement.textContent = message;
     firebaseStatusElement.style.color = color;
+    googleLoginBtn.textContent = buttonText;
+    if (color === 'green') {
+        googleLoginBtn.classList.remove('btn-danger');
+        googleLoginBtn.classList.add('btn-success');
+    } else {
+        googleLoginBtn.classList.remove('btn-success');
+        googleLoginBtn.classList.add('btn-danger');
+    }
 }
 
 // Funções de Local Storage (mantidas como fallback/backup)
@@ -349,7 +368,7 @@ function saveData() {
         salvarNoLocalStorage('orcamentos', orcamentos);
         salvarNoLocalStorage('proximoOrcamentoId', proximoOrcamentoId);
         salvarNoLocalStorage('currentOrcamento', currentOrcamento);
-        updateFirebaseStatus('Salvo Localmente', 'blue');
+        updateFirebaseStatus('Salvo Localmente', 'blue', 'Login Google Necessário');
     }
 }
 
@@ -401,23 +420,24 @@ function formatarMoeda(valor) {
 function salvarCliente(event, isSubmit = false) {
     const id = document.getElementById('cliente-id').value;
     const nome = document.getElementById('cliente-nome').value.trim();
-    const email = document.getElementById('cliente-email').value.trim();
-    const telefone = document.getElementById('cliente-telefone').value.trim();
+    const telefoneMovel = document.getElementById('cliente-telefone-movel').value.trim();
+    const telefoneFixo = document.getElementById('cliente-telefone-fixo').value.trim();
+    const cpfCnpj = document.getElementById('cliente-cpf-cnpj').value.trim();
     const endereco = document.getElementById('cliente-endereco').value.trim();
 
     if (!nome) {
-        if (isSubmit) alert('O nome do cliente é obrigatório.');
+        if (isSubmit) alert('O nome ou empresa do cliente é obrigatório.');
         return;
     }
 
     if (id) {
         const index = clientes.findIndex(c => c.id === id);
         if (index !== -1) {
-            clientes[index] = { id, nome, email, telefone, endereco };
+            clientes[index] = { id, nome, telefoneMovel, telefoneFixo, cpfCnpj, endereco };
             if (isSubmit) alert('Cliente atualizado com sucesso!');
         }
     } else {
-        const novoCliente = { id: generateAlphanumericUniqueId(), nome, email, telefone, endereco };
+        const novoCliente = { id: generateAlphanumericUniqueId(), nome, telefoneMovel, telefoneFixo, cpfCnpj, endereco };
         clientes.push(novoCliente);
         document.getElementById('cliente-id').value = novoCliente.id;
         if (isSubmit) alert('Cliente adicionado com sucesso!');
@@ -436,8 +456,9 @@ function renderizarClientes() {
     clientes.forEach(cliente => {
         const row = tbody.insertRow();
         row.insertCell().textContent = cliente.nome;
-        row.insertCell().textContent = cliente.email || 'N/A';
-        row.insertCell().textContent = cliente.telefone || 'N/A';
+        row.insertCell().textContent = cliente.telefoneMovel || 'N/A';
+        row.insertCell().textContent = cliente.telefoneFixo || 'N/A';
+        row.insertCell().textContent = cliente.cpfCnpj || 'N/A';
         row.insertCell().textContent = cliente.endereco || 'N/A';
         const acoesCell = row.insertCell();
         acoesCell.innerHTML = `
@@ -453,8 +474,9 @@ function editarCliente(id) {
     if (cliente) {
         document.getElementById('cliente-id').value = cliente.id;
         document.getElementById('cliente-nome').value = cliente.nome;
-        document.getElementById('cliente-email').value = cliente.email;
-        document.getElementById('cliente-telefone').value = cliente.telefone;
+        document.getElementById('cliente-telefone-movel').value = cliente.telefoneMovel;
+        document.getElementById('cliente-telefone-fixo').value = cliente.telefoneFixo;
+        document.getElementById('cliente-cpf-cnpj').value = cliente.cpfCnpj;
         document.getElementById('cliente-endereco').value = cliente.endereco;
         showSection('clientes');
         document.querySelector('#nav-clientes').click();
@@ -469,6 +491,13 @@ function excluirCliente(id) {
         renderizarClientes();
         alert('Cliente excluído com sucesso!');
     }
+}
+
+function novoCliente() {
+    document.getElementById('cliente-form').reset();
+    document.getElementById('cliente-id').value = '';
+    document.getElementById('cliente-nome').focus();
+    alert('Formulário de cliente limpo para novo cadastro.');
 }
 
 // Produtos
@@ -601,6 +630,13 @@ function excluirProduto(id, categoriaAberta = null) {
             }
         }
     }
+}
+
+function novoProduto() {
+    document.getElementById('produto-form').reset();
+    document.getElementById('produto-id').value = '';
+    document.getElementById('produto-nome-proposta').focus();
+    alert('Formulário de produto limpo para novo cadastro.');
 }
 
 // Orçamentos
@@ -927,6 +963,17 @@ function renderizarFaturamentosGerados() {
         `;
     });
 }
+
+function novoFaturamento() {
+    if (confirm('Deseja iniciar um novo faturamento? As alterações não salvas no faturamento atual serão perdidas.')) {
+        document.getElementById('faturamento-form').reset();
+        document.getElementById('faturamento-parcelas-container').innerHTML = '';
+        document.getElementById('faturamento-orcamento-vinculado').value = '';
+        document.getElementById('faturamento-cliente-nome').value = '';
+        alert('Formulário de faturamento limpo para novo cadastro.');
+    }
+}
+
 
 // Nota Fornecedor (NFE) - Funções REORGANIZADAS
 const MAX_NFE_CHAVES = 3; 
