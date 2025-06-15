@@ -45,30 +45,36 @@
                     <form id="cliente-form">
                         <input type="hidden" id="cliente-id">
                         <div class="form-group">
-                            <label for="cliente-nome">Nome:</label>
+                            <label for="cliente-nome">Nome ou Empresa:</label>
                             <input type="text" id="cliente-nome" required>
                         </div>
                         <div class="form-group">
-                            <label for="cliente-email">E-mail:</label>
-                            <input type="email" id="cliente-email">
+                            <label for="cliente-telefone-movel">Telefone (Móvel):</label>
+                            <input type="tel" id="cliente-telefone-movel" placeholder="(XX) XXXXX-XXXX">
                         </div>
                         <div class="form-group">
-                            <label for="cliente-telefone">Telefone:</label>
-                            <input type="tel" id="cliente-telefone">
+                            <label for="cliente-telefone-fixo">Telefone (Fixo):</label>
+                            <input type="tel" id="cliente-telefone-fixo" placeholder="(XX) XXXX-XXXX">
+                        </div>
+                        <div class="form-group">
+                            <label for="cliente-cpf-cnpj">CPF ou CNPJ:</label>
+                            <input type="text" id="cliente-cpf-cnpj">
                         </div>
                         <div class="form-group">
                             <label for="cliente-endereco">Endereço:</label>
                             <input type="text" id="cliente-endereco">
                         </div>
                         <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Cliente</button>
+                        <button type="button" id="novo-cliente-btn" class="btn-secondary"><i class="fas fa-plus-circle"></i> Novo Cliente</button>
                     </form>
                     <div class="table-container">
                         <table id="clientes-tabela">
                             <thead>
                                 <tr>
-                                    <th>Nome</th>
-                                    <th>E-mail</th>
-                                    <th>Telefone</th>
+                                    <th>Nome ou Empresa</th>
+                                    <th>Telefone (Móvel)</th>
+                                    <th>Telefone (Fixo)</th>
+                                    <th>CPF ou CNPJ</th>
                                     <th>Endereço</th>
                                     <th>Ações</th>
                                 </tr>
@@ -100,6 +106,7 @@
                             <input type="number" id="produto-valor" step="0.01" min="0" required>
                         </div>
                         <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Produto</button>
+                        <button type="button" id="novo-produto-btn" class="btn-secondary"><i class="fas fa-plus-circle"></i> Novo Produto</button>
                     </form>
                     
                     <h3 class="mt-20">Categorias de Produtos</h3>
@@ -173,7 +180,7 @@
                             <label for="faturamento-orcamento-vinculado">Vincular a um Orçamento Salvo:</label>
                             <select id="faturamento-orcamento-vinculado" required>
                                 <option value="">Selecione um orçamento...</option>
-                            </option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="faturamento-cliente">Cliente:</label>
@@ -195,10 +202,11 @@
                         <h3 class="mt-20">Parcelas</h3>
                         <div id="faturamento-parcelas-container">
                             </div>
-                        <button type="button" id="add-parcela-btn" class="btn-secondary"><i class="fas fa-plus"></i> Adicionar Parcela</button>
                         
-                        <div class="form-actions mt-20">
-                             <button type="button" id="gerar-faturamento-pdf-btn" class="btn-primary"><i class="fas fa-file-pdf"></i> Gerar e Salvar Faturamento</button>
+                        <div class="form-actions-faturamento mt-20">
+                            <button type="button" id="add-parcela-btn" class="btn-secondary"><i class="fas fa-plus"></i> Adicionar Parcela</button>
+                            <button type="button" id="gerar-faturamento-pdf-btn" class="btn-primary"><i class="fas fa-file-pdf"></i> Gerar e Salvar Faturamento</button>
+                            <button type="button" id="novo-faturamento-btn" class="btn-secondary"><i class="fas fa-file-alt"></i> Novo Faturamento</button>
                         </div>
                     </form>
                     <h3 class="mt-20">Faturamentos Gerados</h3>
@@ -232,8 +240,7 @@
                             <i class="fas fa-upload"></i> Importar Backup
                             <input type="file" id="importar-backup-file" accept=".json" style="display: none;">
                         </label>
-                        <button id="google-login-btn" class="btn-google"><i class="fab fa-google"></i> Login com Google</button>
-                        <button id="google-logout-btn" class="btn-google" style="display:none;"><i class="fas fa-sign-out-alt"></i> Sair do Google</button>
+                        <button id="google-login-btn" class="btn-google"><i class="fab fa-google"></i> Login Google Necessário</button>
                     </div>
 
                     <div class="backup-status-info mt-20">
@@ -297,8 +304,7 @@
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
-        // IMPORTANTE: Adicione 'collection' e 'doc' para Firestore
-        import { getFirestore, doc, setDoc, getDoc, collection } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -319,18 +325,13 @@
         window.jsPDF = window.jspdf.jsPDF;
         document.getElementById('current-year').textContent = new Date().getFullYear();
 
-        // Pass Firebase instances AND functions to the global scope or to script.js via a setup function
+        // Pass Firebase instances to the global scope or to script.js via a setup function
         window.firebaseAuth = auth;
         window.firebaseDb = db;
         window.GoogleAuthProvider = GoogleAuthProvider;
         window.signInWithPopup = signInWithPopup;
         window.signOut = signOut;
         window.onAuthStateChanged = onAuthStateChanged;
-        // IMPORTANTE: Passe as funções 'doc', 'setDoc', 'getDoc', 'collection'
-        window.firebaseDoc = doc;
-        window.firebaseSetDoc = setDoc;
-        window.firebaseGetDoc = getDoc;
-        window.firebaseCollection = collection;
 
     </script>
     <script src="script.js"></script>
