@@ -178,8 +178,9 @@ async function saveDataToFirestore() {
 
     updateFirebaseStatus('Conectando...', 'orange');
     try {
-        const userDocRef = window.firebaseDb.collection('users').doc(firebaseUser.uid);
-        await window.setDoc(userDocRef, {
+        // Correção aqui: usar window.firebaseDoc com window.firebaseDb
+        const userDocRef = window.firebaseDoc(window.firebaseDb, 'users', firebaseUser.uid);
+        await window.firebaseSetDoc(userDocRef, {
             clientes: clientes,
             produtos: produtos,
             orcamentos: orcamentos,
@@ -203,8 +204,9 @@ async function loadDataFromFirestore() {
 
     updateFirebaseStatus('Conectando...', 'orange');
     try {
-        const userDocRef = window.firebaseDb.collection('users').doc(firebaseUser.uid);
-        const docSnap = await window.getDoc(userDocRef);
+        // Correção aqui: usar window.firebaseDoc com window.firebaseDb
+        const userDocRef = window.firebaseDoc(window.firebaseDb, 'users', firebaseUser.uid);
+        const docSnap = await window.firebaseGetDoc(userDocRef);
 
         if (docSnap.exists()) {
             const data = docSnap.data();
