@@ -12,6 +12,26 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="shortcut icon" href="assets/favicon.ico" type="image/x-icon">
+    <style>
+        /* Estilo para o status do Firebase no cabeçalho */
+        #cloud-status-container {
+            text-align: right;
+            padding: 5px 20px;
+            background-color: #f0f0f0;
+            border-bottom: 1px solid #ddd;
+        }
+        #firebase-cloud-status {
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        /* Classe para agrupar botões de ação do formulário */
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap; /* Permite que os botões quebrem a linha em telas pequenas */
+        }
+    </style>
 </head>
 <body>
     <div class="app-wrapper">
@@ -24,6 +44,9 @@
                     <p>Contato: 24 99223-2018 / 24 99296-9844</p>
                     <p>CNPJ: 22.827.727/0001-80</p>
                 </div>
+            </div>
+             <div id="cloud-status-container">
+                Firebase Cloud: <span id="firebase-cloud-status">Desconectado</span>
             </div>
         </header>
 
@@ -45,29 +68,32 @@
                     <form id="cliente-form">
                         <input type="hidden" id="cliente-id">
                         <div class="form-group">
-                            <label for="cliente-nome">Nome:</label>
+                            <label for="cliente-nome">Nome ou Empresa:</label>
                             <input type="text" id="cliente-nome" required>
                         </div>
                         <div class="form-group">
-                            <label for="cliente-email">E-mail:</label>
-                            <input type="email" id="cliente-email">
+                            <label for="cliente-cpf-cnpj">CPF ou CNPJ:</label>
+                            <input type="text" id="cliente-cpf-cnpj">
                         </div>
                         <div class="form-group">
                             <label for="cliente-telefone">Telefone:</label>
-                            <input type="tel" id="cliente-telefone">
+                            <input type="tel" id="cliente-telefone" placeholder="(XX) XXXXX-XXXX ou (XX) XXXX-XXXX">
                         </div>
                         <div class="form-group">
                             <label for="cliente-endereco">Endereço:</label>
                             <input type="text" id="cliente-endereco">
                         </div>
-                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Cliente</button>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Cliente</button>
+                            <button type="button" id="novo-cliente-btn" class="btn-secondary"><i class="fas fa-plus"></i> Novo Cliente</button>
+                        </div>
                     </form>
                     <div class="table-container">
                         <table id="clientes-tabela">
                             <thead>
                                 <tr>
-                                    <th>Nome</th>
-                                    <th>E-mail</th>
+                                    <th>Nome ou Empresa</th>
+                                    <th>CPF ou CNPJ</th>
                                     <th>Telefone</th>
                                     <th>Endereço</th>
                                     <th>Ações</th>
@@ -99,7 +125,10 @@
                             <label for="produto-valor">Valor (R$):</label>
                             <input type="number" id="produto-valor" step="0.01" min="0" required>
                         </div>
-                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Produto</button>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Produto</button>
+                            <button type="button" id="novo-produto-btn" class="btn-secondary"><i class="fas fa-plus"></i> Novo Produto</button>
+                        </div>
                     </form>
                     
                     <h3 class="mt-20">Categorias de Produtos</h3>
@@ -173,7 +202,7 @@
                             <label for="faturamento-orcamento-vinculado">Vincular a um Orçamento Salvo:</label>
                             <select id="faturamento-orcamento-vinculado" required>
                                 <option value="">Selecione um orçamento...</option>
-                            </option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="faturamento-cliente">Cliente:</label>
@@ -194,16 +223,17 @@
 
                         <h3 class="mt-20">Parcelas</h3>
                         <div id="faturamento-parcelas-container">
-                            </div>
-                        <button type="button" id="add-parcela-btn" class="btn-secondary"><i class="fas fa-plus"></i> Adicionar Parcela</button>
+                        </div>
                         
                         <div class="form-actions mt-20">
+                             <button type="button" id="add-parcela-btn" class="btn-secondary"><i class="fas fa-plus"></i> Adicionar Parcela</button>
                              <button type="button" id="gerar-faturamento-pdf-btn" class="btn-primary"><i class="fas fa-file-pdf"></i> Gerar e Salvar Faturamento</button>
+                             <button type="button" id="novo-faturamento-btn" class="btn-secondary"><i class="fas fa-file-alt"></i> Novo Faturamento</button>
                         </div>
                     </form>
                     <h3 class="mt-20">Faturamentos Gerados</h3>
                     <div id="lista-faturamentos-gerados">
-                        </div>
+                    </div>
                 </section>
 
                 <section id="nota-fornecedor-section">
@@ -224,7 +254,7 @@
                 <section id="backup-section">
                     <h2><i class="fas fa-cloud-upload-alt"></i> Backup & Restore</h2>
                     <p class="mb-20" style="color: var(--cor-destaque-primaria); text-align: center; border: 1px solid var(--cor-destaque-secundaria); padding: 10px; border-radius: 5px;">
-                        <strong>IMPORTANTE:</strong> Seus dados são salvos no seu navegador. Faça backups regularmente para não perder suas informações.
+                        <strong>IMPORTANTE:</strong> Seus dados podem ser salvos localmente no navegador ou na nuvem com o login do Google. Faça backups regularmente.
                     </p>
                     <div class="backup-actions">
                         <button id="exportar-backup-btn" class="btn-primary"><i class="fas fa-download"></i> Exportar Backup</button>
@@ -232,14 +262,14 @@
                             <i class="fas fa-upload"></i> Importar Backup
                             <input type="file" id="importar-backup-file" accept=".json" style="display: none;">
                         </label>
-                        <button id="google-login-btn" class="btn-google"><i class="fab fa-google"></i> Login com Google</button>
-                        <button id="google-logout-btn" class="btn-google" style="display:none;"><i class="fas fa-sign-out-alt"></i> Sair do Google</button>
+                        <button id="google-login-btn" class="btn-google"><i class="fab fa-google"></i> LOGIN GOOGLE NECESSARIO</button>
+                        <button id="google-logout-btn" class="btn-google" style="display:none;"><i class="fas fa-sign-out-alt"></i> LOGADO COM FIREBASE CLOUD</button>
                     </div>
 
                     <div class="backup-status-info mt-20">
                         <p>Status: <span id="backup-status">Pronto</span></p>
                         <p>Último Backup: <span id="ultimo-backup">Nenhum</span></p>
-                        <p>Status Firebase: <span id="firebase-status" style="font-weight: bold;">Desconectado</span></p>
+                        <p>Status Firebase (Detalhado): <span id="firebase-status" style="font-weight: bold;">Desconectado</span></p>
                     </div>
                 </section>
             </main>
