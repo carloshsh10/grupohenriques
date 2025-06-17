@@ -21,6 +21,8 @@ let editingItemIndex = -1;
 // Firebase variables
 let firebaseUser = null;
 const firebaseStatusElement = document.getElementById('firebase-status');
+const firebaseCloudStatusElement = document.getElementById('firebase-cloud-status');
+
 
 // Inicialização do aplicativo
 document.addEventListener('DOMContentLoaded', function() {
@@ -53,6 +55,12 @@ function configurarEventListeners() {
     document.getElementById('cliente-form').addEventListener('submit', (e) => e.preventDefault()); // Prevenir envio padrão
     document.getElementById('produto-form').addEventListener('input', salvarProduto);
     document.getElementById('produto-form').addEventListener('submit', (e) => e.preventDefault());
+    
+    // Botões de "Novo"
+    document.getElementById('novo-cliente-btn').addEventListener('click', novoCliente);
+    document.getElementById('novo-produto-btn').addEventListener('click', novoProduto);
+    document.getElementById('novo-faturamento-btn').addEventListener('click', novoFaturamento);
+
 
     // Orçamento
     document.getElementById('orcamento-form').addEventListener('input', salvarDadosOrcamento);
@@ -130,7 +138,7 @@ async function signInWithGoogle() {
         // onAuthStateChanged will handle the UI update and data loading
     } catch (error) {
         console.error("Erro no login com Google: ", error);
-        updateFirebaseStatus('Erro de Conexão Firebase', 'red');
+        updateFirebaseStatus('Erro de Conexão', 'red');
         alert("Erro ao fazer login com Google: " + error.message);
     }
 }
@@ -148,18 +156,32 @@ async function signOutGoogle() {
 
 function setupFirebaseAuthStateListener() {
     window.onAuthStateChanged(window.firebaseAuth, async (user) => {
+        const loginBtn = document.getElementById('google-login-btn');
+        const logoutBtn = document.getElementById('google-logout-btn');
+
         if (user) {
             firebaseUser = user;
             updateFirebaseStatus('Conectado', 'green');
-            document.getElementById('google-login-btn').style.display = 'none';
-            document.getElementById('google-logout-btn').style.display = 'inline-block';
+            
+            // 4ª e 5ª Modificação: Atualiza botões e status
+            loginBtn.style.display = 'none';
+            logoutBtn.style.display = 'inline-block';
+            logoutBtn.style.backgroundColor = 'green';
+            logoutBtn.style.borderColor = 'darkgreen';
+            logoutBtn.innerHTML = '<i class="fas fa-check-circle"></i> LOGADO COM FIREBASE CLOUD';
+
             await loadDataFromFirestore();
         } else {
             firebaseUser = null;
-            updateFirebaseStatus('Desconectado', 'gray');
-            document.getElementById('google-login-btn').style.display = 'inline-block';
-            document.getElementById('google-logout-btn').style.display = 'none';
-            // Optionally clear data or load from local storage if not logged in
+            updateFirebaseStatus('Desconectado', 'red');
+
+            // 4ª e 5ª Modificação: Atualiza botões e status
+            loginBtn.style.display = 'inline-block';
+            logoutBtn.style.display = 'none';
+            loginBtn.style.backgroundColor = 'red';
+            loginBtn.style.borderColor = 'darkred';
+            loginBtn.innerHTML = '<i class="fab fa-google"></i> LOGIN GOOGLE NECESSÁRIO';
+            
             loadDataFromLocalStorage();
         }
     });
@@ -176,9 +198,8 @@ async function saveDataToFirestore() {
         return;
     }
 
-    updateFirebaseStatus('Conectando...', 'orange');
+    updateFirebaseStatus('Sincronizando...', 'orange');
     try {
-        // Correção aqui: usar window.firebaseDoc com window.firebaseDb
         const userDocRef = window.firebaseDoc(window.firebaseDb, 'users', firebaseUser.uid);
         await window.firebaseSetDoc(userDocRef, {
             clientes: clientes,
@@ -187,10 +208,10 @@ async function saveDataToFirestore() {
             proximoOrcamentoId: proximoOrcamentoId,
             currentOrcamento: currentOrcamento
         });
-        updateFirebaseStatus('Banco de Dados Salvo com Sucesso!', 'green');
+        updateFirebaseStatus('Conectado', 'green');
     } catch (error) {
         console.error("Erro ao salvar dados no Firestore: ", error);
-        updateFirebaseStatus('Erro de Conexão Firebase', 'red');
+        updateFirebaseStatus('Erro de Conexão', 'red');
         alert("Erro ao salvar dados no Firebase. Verifique sua conexão ou tente novamente.");
     }
 }
@@ -204,7 +225,6 @@ async function loadDataFromFirestore() {
 
     updateFirebaseStatus('Conectando...', 'orange');
     try {
-        // Correção aqui: usar window.firebaseDoc com window.firebaseDb
         const userDocRef = window.firebaseDoc(window.firebaseDb, 'users', firebaseUser.uid);
         const docSnap = await window.firebaseGetDoc(userDocRef);
 
@@ -226,7 +246,6 @@ async function loadDataFromFirestore() {
                 nfeChaves: []
             };
 
-            // Ensure nfeChaves are in the correct format for currentOrcamento
             if (!Array.isArray(currentOrcamento.nfeChaves)) {
                 currentOrcamento.nfeChaves = [];
             } else {
@@ -238,7 +257,6 @@ async function loadDataFromFirestore() {
                 }).filter(entry => entry !== null && entry !== undefined);
             }
 
-            // Also ensure for existing orcamentos
             orcamentos = orcamentos.map(orc => {
                 if (!Array.isArray(orc.nfeChaves)) {
                     orc.nfeChaves = [];
@@ -253,10 +271,9 @@ async function loadDataFromFirestore() {
                 return orc;
             });
 
-
-            updateFirebaseStatus('Dados Carregados do Firebase!', 'green');
+            updateFirebaseStatus('Conectado', 'green');
         } else {
-            updateFirebaseStatus('Nenhum dado no Firebase, começando com vazio.', 'blue');
+            updateFirebaseStatus('Nenhum dado na nuvem', 'blue');
             clientes = [];
             produtos = [];
             orcamentos = [];
@@ -273,18 +290,26 @@ async function loadDataFromFirestore() {
                 nfeChaves: []
             };
         }
-        carregarDadosIniciais(); // Renderiza a UI com os dados carregados
+        carregarDadosIniciais(); 
     } catch (error) {
         console.error("Erro ao carregar dados do Firestore: ", error);
-        updateFirebaseStatus('Erro de Conexão Firebase', 'red');
+        updateFirebaseStatus('Erro de Conexão', 'red');
         alert("Erro ao carregar dados do Firebase. Carregando dados locais. " + error.message);
-        loadDataFromLocalStorage(); // Fallback to local storage
+        loadDataFromLocalStorage(); // Fallback
     }
 }
 
 function updateFirebaseStatus(message, color) {
-    firebaseStatusElement.textContent = message;
-    firebaseStatusElement.style.color = color;
+    // Status detalhado na aba de backup
+    if(firebaseStatusElement) {
+        firebaseStatusElement.textContent = message;
+        firebaseStatusElement.style.color = color;
+    }
+    // 5ª Modificação: Status global no cabeçalho
+    if(firebaseCloudStatusElement) {
+        firebaseCloudStatusElement.textContent = message;
+        firebaseCloudStatusElement.style.color = color;
+    }
 }
 
 // Funções de Local Storage (mantidas como fallback/backup)
@@ -309,7 +334,6 @@ function loadDataFromLocalStorage() {
         nfeChaves: []
     };
 
-    // Ensure nfeChaves is an array and converted for currentOrcamento from local storage
     if (!Array.isArray(currentOrcamento.nfeChaves)) {
         currentOrcamento.nfeChaves = [];
     } else {
@@ -321,7 +345,6 @@ function loadDataFromLocalStorage() {
         }).filter(entry => entry !== null && entry !== undefined);
     }
 
-    // Also ensure for existing orcamentos from local storage
     orcamentos = orcamentos.map(orc => {
         if (!Array.isArray(orc.nfeChaves)) {
             orc.nfeChaves = [];
@@ -339,7 +362,6 @@ function loadDataFromLocalStorage() {
     carregarDadosIniciais();
 }
 
-// Altera a função salvarNoLocalStorage para chamar saveDataToFirestore se logado
 function saveData() {
     if (firebaseUser) {
         saveDataToFirestore();
@@ -349,7 +371,7 @@ function saveData() {
         salvarNoLocalStorage('orcamentos', orcamentos);
         salvarNoLocalStorage('proximoOrcamentoId', proximoOrcamentoId);
         salvarNoLocalStorage('currentOrcamento', currentOrcamento);
-        updateFirebaseStatus('Salvo Localmente', 'blue');
+        updateFirebaseStatus('Salvo Localmente. Conecte-se para salvar na nuvem.', 'blue');
     }
 }
 
@@ -367,12 +389,11 @@ function showSection(sectionId) {
     });
     document.getElementById(sectionId + '-section').classList.add('active');
 
-    // Carregar dados dinâmicos ao mostrar a seção correspondente
     if (sectionId === 'orcamentos') carregarClientesNoSelect('orcamento-cliente');
     if (sectionId === 'faturamento') carregarOrcamentosNoSelect('faturamento-orcamento-vinculado');
     if (sectionId === 'nota-fornecedor') {
         carregarOrcamentosNoSelect('nfe-orcamento-vinculado');
-        carregarChavesNFEParaOrcamentoSelecionado(); // Carregar chaves NFE ao entrar na aba
+        carregarChavesNFEParaOrcamentoSelecionado(); 
     }
     if (sectionId === 'produtos') renderizarProdutosPorCategoria();
 }
@@ -386,7 +407,6 @@ function generateSequentialId(isInitialLoad = false) {
     let id = proximoOrcamentoId;
     if (!isInitialLoad) {
         proximoOrcamentoId++;
-        // Não salva no local storage diretamente, chama saveData()
         saveData(); 
     }
     return id.toString().padStart(4, '0');
@@ -401,7 +421,7 @@ function formatarMoeda(valor) {
 function salvarCliente(event, isSubmit = false) {
     const id = document.getElementById('cliente-id').value;
     const nome = document.getElementById('cliente-nome').value.trim();
-    const email = document.getElementById('cliente-email').value.trim();
+    const cpfCnpj = document.getElementById('cliente-cpf-cnpj').value.trim(); // Modificado
     const telefone = document.getElementById('cliente-telefone').value.trim();
     const endereco = document.getElementById('cliente-endereco').value.trim();
 
@@ -413,21 +433,25 @@ function salvarCliente(event, isSubmit = false) {
     if (id) {
         const index = clientes.findIndex(c => c.id === id);
         if (index !== -1) {
-            clientes[index] = { id, nome, email, telefone, endereco };
+            clientes[index] = { id, nome, cpfCnpj, telefone, endereco }; // Modificado
             if (isSubmit) alert('Cliente atualizado com sucesso!');
         }
     } else {
-        const novoCliente = { id: generateAlphanumericUniqueId(), nome, email, telefone, endereco };
+        const novoCliente = { id: generateAlphanumericUniqueId(), nome, cpfCnpj, telefone, endereco }; // Modificado
         clientes.push(novoCliente);
         document.getElementById('cliente-id').value = novoCliente.id;
         if (isSubmit) alert('Cliente adicionado com sucesso!');
     }
-    saveData(); // Save to Firestore or Local Storage
+    saveData();
     renderizarClientes();
     if (isSubmit) {
-        document.getElementById('cliente-form').reset();
-        document.getElementById('cliente-id').value = '';
+        novoCliente();
     }
+}
+
+function novoCliente() {
+    document.getElementById('cliente-form').reset();
+    document.getElementById('cliente-id').value = '';
 }
 
 function renderizarClientes() {
@@ -436,7 +460,7 @@ function renderizarClientes() {
     clientes.forEach(cliente => {
         const row = tbody.insertRow();
         row.insertCell().textContent = cliente.nome;
-        row.insertCell().textContent = cliente.email || 'N/A';
+        row.insertCell().textContent = cliente.cpfCnpj || 'N/A'; // Modificado
         row.insertCell().textContent = cliente.telefone || 'N/A';
         row.insertCell().textContent = cliente.endereco || 'N/A';
         const acoesCell = row.insertCell();
@@ -453,7 +477,7 @@ function editarCliente(id) {
     if (cliente) {
         document.getElementById('cliente-id').value = cliente.id;
         document.getElementById('cliente-nome').value = cliente.nome;
-        document.getElementById('cliente-email').value = cliente.email;
+        document.getElementById('cliente-cpf-cnpj').value = cliente.cpfCnpj; // Modificado
         document.getElementById('cliente-telefone').value = cliente.telefone;
         document.getElementById('cliente-endereco').value = cliente.endereco;
         showSection('clientes');
@@ -465,7 +489,7 @@ function editarCliente(id) {
 function excluirCliente(id) {
     if (confirm('Tem certeza que deseja excluir este cliente?')) {
         clientes = clientes.filter(c => c.id !== id);
-        saveData(); // Save to Firestore or Local Storage
+        saveData(); 
         renderizarClientes();
         alert('Cliente excluído com sucesso!');
     }
@@ -507,13 +531,18 @@ function salvarProduto(event, isSubmit = false) {
     }
     if(isSubmit) alert(id ? 'Produto atualizado!' : 'Produto adicionado!');
 
-    saveData(); // Save to Firestore or Local Storage
+    saveData(); 
     renderizarProdutosPorCategoria();
     if (isSubmit) {
-        document.getElementById('produto-form').reset();
-        document.getElementById('produto-id').value = '';
+        novoProduto();
     }
 }
+
+function novoProduto() {
+    document.getElementById('produto-form').reset();
+    document.getElementById('produto-id').value = '';
+}
+
 
 function renderizarProdutosPorCategoria() {
     const container = document.getElementById('categorias-container');
@@ -589,7 +618,7 @@ function editarProduto(id) {
 function excluirProduto(id, categoriaAberta = null) {
     if (confirm('Tem certeza que deseja excluir este produto?')) {
         produtos = produtos.filter(p => p.id !== id);
-        saveData(); // Save to Firestore or Local Storage
+        saveData();
         renderizarProdutosPorCategoria();
         alert('Produto excluído!');
         if (categoriaAberta) {
@@ -632,7 +661,7 @@ function salvarDadosOrcamento() {
     currentOrcamento.maoDeObra = isNaN(maoDeObraVal) ? 0 : maoDeObraVal;
     currentOrcamento.relatorio = document.getElementById('orcamento-relatorio').value;
     currentOrcamento.formasPagamento = document.getElementById('orcamento-formas-pagamento').value;
-    saveData(); // Save to Firestore or Local Storage
+    saveData();
 }
 
 function adicionarOuEditarItemOrcamento(event) {
@@ -652,7 +681,7 @@ function adicionarOuEditarItemOrcamento(event) {
     } else {
         currentOrcamento.itens.push(newItem);
     }
-    saveData(); // Save to Firestore or Local Storage
+    saveData();
     renderizarItensOrcamento();
     calcularTotaisOrcamento();
     closeModal();
@@ -686,7 +715,6 @@ function calcularTotaisOrcamento() {
 }
 
 function carregarOrcamentoAtual() {
-    // currentOrcamento is already loaded by loadDataFromFirestore or loadDataFromLocalStorage
     if (!currentOrcamento.id) currentOrcamento.id = generateSequentialId(true);
     
     document.getElementById('orcamento-cliente').value = currentOrcamento.clienteId || '';
@@ -707,7 +735,7 @@ function salvarOrcamentoAtual() {
     if (currentOrcamento.itens.length === 0) { alert('Adicione pelo menos um item.'); return; }
 
     currentOrcamento.data = new Date().toISOString();
-    salvarDadosOrcamento(); // This will call saveData() which handles Firestore/Local Storage
+    salvarDadosOrcamento(); 
 
     const existingIndex = orcamentos.findIndex(o => o.id === currentOrcamento.id);
     if (existingIndex !== -1) {
@@ -715,7 +743,7 @@ function salvarOrcamentoAtual() {
     } else {
         orcamentos.push({ ...currentOrcamento });
     }
-    saveData(); // Save to Firestore or Local Storage
+    saveData();
     renderizarOrcamentosSalvos();
     alert(`Orçamento ${currentOrcamento.id} salvo com sucesso!`);
 }
@@ -726,7 +754,7 @@ function novoOrcamento() {
             id: generateSequentialId(),
             clienteId: null, itens: [], maoDeObra: 0, relatorio: "", formasPagamento: "", servicos: "", faturamentoData: null, nfeChaves: []
         };
-        saveData(); // Save to Firestore or Local Storage
+        saveData();
         carregarOrcamentoAtual();
         alert('Novo orçamento iniciado com ID: ' + currentOrcamento.id);
     }
@@ -738,7 +766,6 @@ function renderizarOrcamentosSalvos() {
     orcamentos.sort((a, b) => new Date(b.data) - new Date(a.data)).forEach(orc => {
         const cliente = clientes.find(c => c.id === orc.clienteId);
         const dataFmt = new Date(orc.data || Date.now()).toLocaleDateString('pt-BR');
-        // Verifica se há alguma chave NFE para exibir o botão "Ver NFE"
         const hasNFE = orc.nfeChaves && orc.nfeChaves.filter(n => n).length > 0;
         ul.innerHTML += `
             <li>
@@ -760,7 +787,6 @@ function carregarOrcamentoSalvo(id) {
     if(orc) {
         if(confirm('Deseja carregar este orçamento? As alterações não salvas no formulário atual serão perdidas.')) {
             currentOrcamento = { ...orc };
-            // Garante que nfeChaves é um array e converte entradas antigas se necessário
             if (!Array.isArray(currentOrcamento.nfeChaves)) {
                 currentOrcamento.nfeChaves = [];
             } else {
@@ -771,7 +797,7 @@ function carregarOrcamentoSalvo(id) {
                     return entry;
                 }).filter(entry => entry !== null && entry !== undefined);
             }
-            saveData(); // Save to Firestore or Local Storage
+            saveData();
             carregarOrcamentoAtual();
             document.querySelector('#nav-orcamentos').click();
             alert(`Orçamento ${id} carregado.`);
@@ -782,7 +808,7 @@ function carregarOrcamentoSalvo(id) {
 function excluirOrcamentoSalvo(id) {
     if (confirm('Tem certeza que deseja excluir permanentemente este orçamento?')) {
         orcamentos = orcamentos.filter(o => o.id !== id);
-        saveData(); // Save to Firestore or Local Storage
+        saveData();
         renderizarOrcamentosSalvos();
         if (currentOrcamento.id === id) novoOrcamento();
         alert('Orçamento excluído!');
@@ -841,13 +867,18 @@ function gerarEAnexarFaturamento() {
     }
 
     orcamentos[orcIndex].faturamentoData = faturamentoData;
-    saveData(); // Save to Firestore or Local Storage
+    saveData();
     gerarFaturamentoPDF(faturamentoData);
     renderizarOrcamentosSalvos();
     renderizarFaturamentosGerados();
-    document.getElementById('faturamento-form').reset();
-    document.getElementById('faturamento-parcelas-container').innerHTML = ''; // Limpa as parcelas
+    novoFaturamento();
     alert('Faturamento gerado e anexado ao orçamento com sucesso!');
+}
+
+function novoFaturamento() {
+    document.getElementById('faturamento-form').reset();
+    document.getElementById('faturamento-parcelas-container').innerHTML = '';
+    document.getElementById('faturamento-cliente-nome').value = '';
 }
 
 function visualizarFaturamento(orcamentoId) {
@@ -863,13 +894,13 @@ function carregarFaturamentoSalvo(orcamentoId) {
     const orc = orcamentos.find(o => o.id === orcamentoId);
     if (orc && orc.faturamentoData) {
         document.getElementById('faturamento-orcamento-vinculado').value = orcamentoId;
-        preencherClienteFaturamento(); // Preenche o nome do cliente
+        preencherClienteFaturamento();
         document.getElementById('faturamento-local').value = orc.faturamentoData.localServico || '';
         document.getElementById('faturamento-tipo-servico').value = orc.faturamentoData.tipoServico || '';
         document.getElementById('faturamento-entrada').value = orc.faturamentoData.valorEntrada > 0 ? orc.faturamentoData.valorEntrada.toFixed(2) : '0';
 
         const container = document.getElementById('faturamento-parcelas-container');
-        container.innerHTML = ''; // Limpa as parcelas existentes
+        container.innerHTML = '';
         orc.faturamentoData.parcelas.forEach(parcela => {
             container.innerHTML += `
                 <div class="parcela-row">
@@ -891,8 +922,8 @@ function excluirFaturamentoSalvo(orcamentoId) {
     if (confirm('Tem certeza que deseja excluir este faturamento? Esta ação não pode ser desfeita.')) {
         const orcIndex = orcamentos.findIndex(o => o.id === orcamentoId);
         if (orcIndex !== -1) {
-            orcamentos[orcIndex].faturamentoData = null; // Remove os dados do faturamento
-            saveData(); // Save to Firestore or Local Storage
+            orcamentos[orcIndex].faturamentoData = null;
+            saveData();
             renderizarOrcamentosSalvos();
             renderizarFaturamentosGerados();
             alert('Faturamento excluído com sucesso!');
@@ -928,13 +959,13 @@ function renderizarFaturamentosGerados() {
     });
 }
 
-// Nota Fornecedor (NFE) - Funções REORGANIZADAS
+// Nota Fornecedor (NFE)
 const MAX_NFE_CHAVES = 3; 
 
 function carregarChavesNFEParaOrcamentoSelecionado() {
     const orcamentoId = document.getElementById('nfe-orcamento-vinculado').value;
     const nfePanel = document.getElementById('nfe-management-panel');
-    nfePanel.innerHTML = ''; // Limpa o painel
+    nfePanel.innerHTML = ''; 
 
     if (!orcamentoId) {
         nfePanel.innerHTML = '<div class="nfe-placeholder"><i class="fas fa-arrow-up"></i><p>Selecione um orçamento acima para começar.</p></div>';
@@ -942,13 +973,10 @@ function carregarChavesNFEParaOrcamentoSelecionado() {
     }
 
     const orc = orcamentos.find(o => o.id === orcamentoId);
-
-    // Garante que nfeChaves exista no orçamento
     if (orc && !orc.nfeChaves) {
         orc.nfeChaves = [];
     }
 
-    // Renderiza campos existentes ou vazios até o limite de MAX_NFE_CHAVES
     for (let i = 0; i < MAX_NFE_CHAVES; i++) {
         const entry = (orc && orc.nfeChaves[i]) ? orc.nfeChaves[i] : { chave: '', fornecedor: '' };
         adicionarCampoChaveNFE(entry, i);
@@ -985,21 +1013,19 @@ function adicionarCampoChaveNFE(initialEntry = { chave: '', fornecedor: '' }, in
     `;
     nfePanel.appendChild(div);
 
-    // Adiciona o event listener para formatação automática
     const inputField = document.getElementById(`nfe-chave-${index}`);
     inputField.addEventListener('input', formatNFEChaveInput);
 
-    // Controle de estado dos botões e campos
     const fornecedorField = document.getElementById(`nfe-fornecedor-${index}`);
     const saveButton = div.querySelector('.btn-salvar-nfe');
     const editButton = div.querySelector('.btn-editar-nfe');
 
-    if (initialEntry.chave) { // Se já tem uma chave, está salvo
+    if (initialEntry.chave) {
         inputField.disabled = true;
         fornecedorField.disabled = true;
         saveButton.style.display = 'none';
         editButton.style.display = 'inline-flex';
-    } else { // Campo novo/vazio
+    } else { 
         inputField.disabled = false;
         fornecedorField.disabled = false;
         saveButton.style.display = 'inline-flex';
@@ -1008,7 +1034,7 @@ function adicionarCampoChaveNFE(initialEntry = { chave: '', fornecedor: '' }, in
 }
 
 function formatNFEChaveInput(event) {
-    let value = event.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
+    let value = event.target.value.replace(/\D/g, ''); 
     let formattedValue = '';
     for (let i = 0; i < value.length; i++) {
         if (i > 0 && i % 4 === 0) {
@@ -1016,7 +1042,7 @@ function formatNFEChaveInput(event) {
         }
         formattedValue += value[i];
     }
-    event.target.value = formattedValue.substring(0, 54); // Limita a 54 caracteres (44 digitos + 10 hifens)
+    event.target.value = formattedValue.substring(0, 54);
 }
 
 function salvarChaveNFE(index) {
@@ -1052,7 +1078,7 @@ function salvarChaveNFE(index) {
 
     inputFieldChave.value = chaveLimpa.replace(/(\d{4})(?=\d)/g, '$1-');
 
-    saveData(); // Save to Firestore or Local Storage
+    saveData();
     renderizarOrcamentosSalvos();
 
     inputFieldChave.disabled = true;
@@ -1087,16 +1113,14 @@ function excluirChaveNFE(index) {
     if (!orc) { alert('Orçamento não encontrado.'); return; }
 
     if (orc.nfeChaves && orc.nfeChaves.length > index) {
-        // Substitui por null em vez de remover para manter os índices dos outros campos
         orc.nfeChaves[index] = null;
-        // Limpa o array de nulos no final
         while (orc.nfeChaves.length > 0 && orc.nfeChaves[orc.nfeChaves.length - 1] === null) {
             orc.nfeChaves.pop();
         }
 
-        saveData(); // Save to Firestore or Local Storage
+        saveData();
         renderizarOrcamentosSalvos();
-        carregarChavesNFEParaOrcamentoSelecionado(); // Recarrega os campos para refletir a remoção
+        carregarChavesNFEParaOrcamentoSelecionado(); 
         alert('Chave de acesso e Fornecedor excluídos com sucesso!');
     }
 }
@@ -1125,7 +1149,7 @@ function visualizarNFE(orcamentoId) {
     if (orc && orc.nfeChaves && orc.nfeChaves.filter(n => n).length > 0) {
         let content = '<h3>Chaves de Acesso da NF-e vinculadas ao Orçamento Nº ' + orcamentoId + ':</h3><ul>';
         orc.nfeChaves.forEach((entry, index) => {
-            if (entry) { // Verifica se a entrada não é nula
+            if (entry) {
                 const chave = entry.chave || 'N/A';
                 const fornecedor = entry.fornecedor || 'N/A';
                 content += `<li>NF-e ${index + 1}: <strong>${chave}</strong> <br> Fornecedor: ${fornecedor}</li>`;
