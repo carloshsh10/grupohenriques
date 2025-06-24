@@ -13,12 +13,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="shortcut icon" href="assets/favicon.ico" type="image/x-icon">
     <style>
-        /* Estilo para o status do Firebase no cabeçalho */
+        /* Estilo para o status do Firebase no cabeçalho (MODIFICADO) */
         #cloud-status-container {
             text-align: right;
-            padding: 5px 20px;
-            background-color: #f0f0f0;
-            border-bottom: 1px solid #ddd;
+            padding: 10px 20px;
+            background-color: transparent; /* Fundo removido */
+            color: white; /* Cor do texto alterada para branco */
+            font-weight: bold; /* Texto em negrito para destaque */
         }
         #firebase-cloud-status {
             font-weight: bold;
@@ -30,6 +31,39 @@
             gap: 10px;
             align-items: center;
             flex-wrap: wrap; /* Permite que os botões quebrem a linha em telas pequenas */
+        }
+    </style>
+    
+    <style>
+        @media (max-width: 1400px) {
+            html {
+                font-size: 92%;
+            }
+            h2 {
+                font-size: 1.6rem;
+            }
+            .form-group input,
+            .form-group select,
+            .form-group textarea {
+                padding: 8px;
+            }
+            .btn-primary, .btn-secondary, .btn-google, .btn-danger, .btn-editar, .btn-excluir, .btn-preview,
+            #adicionar-item-btn, #gerar-pdf-btn, #salvar-orcamento-btn, #novo-orcamento-btn,
+            #add-parcela-btn, #gerar-faturamento-pdf-btn, #novo-faturamento-btn {
+                padding: 8px 12px;
+                font-size: 0.85rem;
+            }
+            main > section {
+                padding: 18px;
+            }
+            nav a {
+                padding: 12px 10px;
+                font-size: 0.9rem;
+            }
+            #clientes-tabela th, #clientes-tabela td,
+            #orcamento-itens-tabela th, #orcamento-itens-tabela td {
+                padding: 8px;
+            }
         }
     </style>
 </head>
