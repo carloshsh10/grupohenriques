@@ -65,61 +65,10 @@
                 padding: 8px;
             }
         }
-        /* Estilos para a nova tela de login */
-        #login-screen {
-            display: flex; /* Começa como flex para centralizar o conteúdo */
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            width: 100vw;
-            background-color: #0f0017; /* Cor de fundo do seu tema */
-            color: white;
-            font-family: sans-serif;
-            text-align: center;
-            position: fixed; /* Fixa a tela de login sobre tudo */
-            top: 0;
-            left: 0;
-            z-index: 9999; /* Garante que fique por cima de outros elementos */
-        }
-        #login-screen h2 {
-            margin-bottom: 20px;
-            font-size: 2em;
-        }
-        #login-screen img {
-            width: 150px; /* Ajuste o tamanho do logo se necessário */
-            margin-bottom: 30px;
-        }
-        #google-login-button-main {
-            background-color: #4285F4;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 5px;
-            font-size: 1.1em;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: background-color 0.3s ease;
-        }
-        #google-login-button-main:hover {
-            background-color: #357ae8;
-        }
     </style>
 </head>
 <body>
-    <div id="login-screen">
-        <img src="assets/logo.png" alt="GRUPO HENRIQUES Logo">
-        <h2>Acesso Restrito - GRUPO HENRIQUES</h2>
-        <p>Por favor, faça login com sua conta Google para continuar.</p>
-        <button id="google-login-button-main">
-            <i class="fab fa-google"></i> Entrar com Google
-        </button>
-        <p id="login-error-message" style="color: red; margin-top: 15px;"></p>
-    </div>
-
-    <div class="app-wrapper" style="display: none;">
+    <div class="app-wrapper">
         <header>
             <div class="logo-container">
                 <img src="assets/logo.png" alt="GRUPO HENRIQUES Logo" id="company-logo">
@@ -347,7 +296,7 @@
                             <i class="fas fa-upload"></i> Importar Backup
                             <input type="file" id="importar-backup-file" accept=".json" style="display: none;">
                         </label>
-                        <button id="google-login-btn" class="btn-google" style="display:none;"><i class="fab fa-google"></i> LOGIN GOOGLE NECESSARIO</button>
+                        <button id="google-login-btn" class="btn-google"><i class="fab fa-google"></i> LOGIN GOOGLE NECESSARIO</button>
                         <button id="google-logout-btn" class="btn-google" style="display:none;"><i class="fas fa-sign-out-alt"></i> LOGADO COM FIREBASE CLOUD</button>
                     </div>
 
@@ -448,7 +397,6 @@
         window.firebaseCollection = collection;
 
     </script>
-    <script src="auth-google.js"></script>
     <script src="script.js"></script>
     <script src="pdf-generator.js"></script>
     <script src="backup.js"></script>
