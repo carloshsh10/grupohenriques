@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
 /* Reset e Estilos Gerais */
 * {
     margin: 0;
@@ -34,8 +36,10 @@ body {
 }
 
 /* Wrapper para o aplicativo inteiro, incluindo header e footer */
+/* MODIFICADO: O app agora começa escondido */
 .app-wrapper {
-    display: flex;
+    display: none;
+    opacity: 0;
     flex-direction: column;
     width: 100%;
     max-width: 1400px; /* Aumentar a largura máxima do app */
@@ -45,6 +49,12 @@ body {
     border-radius: var(--border-radius-padrao);
     overflow: hidden;
     border: 1px solid var(--cor-borda);
+    transition: opacity 0.5s ease-in;
+}
+/* Classe adicionada via JS para mostrar o app */
+.app-wrapper.visible {
+    display: flex;
+    opacity: 1;
 }
 
 /* Cabeçalho */
@@ -755,10 +765,15 @@ footer {
         border-radius: 0; /* Remove bordas arredondadas em telas menores */
         box-shadow: none;
         height: 100vh;
+        /* Ensure app-wrapper visible is always full height on small screens */
+        min-height: 100vh;
+        max-width: 100%;
     }
 
     body {
         padding: 0; /* Remove padding do body em telas menores */
+        align-items: flex-start; /* Ensure content starts from top */
+        min-height: 100vh;
     }
 
     .container {
@@ -767,10 +782,13 @@ footer {
         border-radius: 0;
         box-shadow: none;
         flex-grow: 1;
-        overflow-y: hidden;
+        overflow-y: hidden; /* Main content handles its own scroll now */
+        min-height: auto; /* Let it grow naturally */
     }
      main {
-        max-height: none; /* Remove a altura máxima para permitir rolagem */
+        max-height: none; /* Remove a altura máxima para permitir rolagem natural */
+        overflow-y: visible; /* Allow content to overflow and body to scroll */
+        padding: 15px; /* Slightly reduce padding on main content */
     }
 
     nav {
@@ -782,7 +800,14 @@ footer {
         overflow-x: auto;
         padding: 10px 0;
         flex-shrink: 0;
+        /* Hide scrollbar for nav but keep functionality */
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none; /* Firefox */
     }
+    nav::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera*/
+    }
+
 
     nav ul {
         display: flex;
@@ -798,23 +823,23 @@ footer {
         padding: 10px 15px;
         border-left: none;
         border-bottom: 3px solid transparent;
+        font-size: 15px; /* Slightly smaller font for nav items */
     }
 
     nav a:hover,
     nav a.active {
+        background-color: rgba(0, 188, 212, 0.1);
+        color: var(--cor-destaque-primaria);
         border-bottom-color: var(--cor-destaque-primaria);
         border-left-color: transparent;
         transform: translateY(0);
-    }
-
-    main {
-        padding: 20px;
     }
 
     header {
         flex-direction: column;
         text-align: center;
         gap: 15px;
+        padding: 15px 20px; /* Adjust header padding */
     }
 
     .logo-container {
@@ -824,43 +849,74 @@ footer {
 
     footer {
         border-radius: 0;
+        padding: 15px; /* Adjust footer padding */
     }
 
     #lista-orcamentos li, #lista-faturamentos-gerados .list-item, #lista-nfe-anexadas .list-item {
         flex-direction: column; /* Empilha texto e botões em telas menores */
         align-items: flex-start;
         gap: 10px;
+        padding: 12px 15px; /* Adjust list item padding */
     }
     #lista-orcamentos li div, #lista-faturamentos-gerados .list-item div, #lista-nfe-anexadas .list-item div {
         width: 100%;
         justify-content: flex-start; /* Alinha botões à esquerda */
     }
     .btn-editar, .btn-excluir, .btn-whatsapp, .btn-telegram, .btn-preview, .btn-faturamento, .btn-nfe {
-        padding: 8px 10px; /* Ajuste fino */
+        padding: 7px 10px; /* Adjust fine */
         font-size: 12px;
     }
      #categorias-container {
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     }
+
+    /* Adjust table styles for better mobile fit */
+    table th,
+    table td {
+        padding: 8px 10px;
+        font-size: 12px; /* Further reduce font size */
+    }
+    .table-container table {
+        min-width: 600px; /* Ensure tables are wide enough to be scrollable if needed */
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 10px; /* Slightly reduce form input padding */
+        font-size: 15px;
+    }
+    button, .btn {
+        padding: 10px 20px; /* Slightly reduce button padding */
+        font-size: 15px;
+    }
 }
 
 @media (max-width: 768px) {
     .company-info h1 {
-        font-size: 20px;
+        font-size: 18px;
     }
 
     .company-info p {
-        font-size: 12px;
+        font-size: 11px;
     }
 
     h2 {
-        font-size: 20px;
+        font-size: 18px;
+        margin-bottom: 15px;
+    }
+    h2 i {
+        font-size: 24px;
+    }
+    h3 {
+        font-size: 17px;
+        margin-bottom: 10px;
     }
 
     button, .btn {
-        padding: 10px 15px; /* Reduzido padding */
-        font-size: 14px;
-        margin-right: 5px; /* Ajuste para botões */
+        padding: 8px 12px; /* Further reduced padding */
+        font-size: 13px;
+        margin-right: 5px; /* Adjust for buttons */
     }
 
     .backup-actions {
@@ -874,22 +930,230 @@ footer {
 
     table th,
     table td {
-        padding: 8px 10px;
-        font-size: 13px;
+        padding: 6px 8px; /* Even smaller padding */
+        font-size: 11px; /* Even smaller font size */
+    }
+    .table-container table {
+        min-width: 500px; /* Further reduced min-width for very small screens */
     }
 
     .modal-content {
-        padding: 20px;
+        padding: 15px;
         width: 95%;
     }
     #produtosCategoriaModal .modal-content {
-        max-width: 95%; 
+        max-width: 95%;
     }
     #categorias-container {
-        grid-template-columns: 1fr; /* Uma coluna em telas muito pequenas */
+        grid-template-columns: 1fr; /* Una columna en pantallas muy pequeñas */
     }
     .parcela-row {
         flex-direction: column;
         align-items: stretch;
+        gap: 10px; /* Reduce gap for stacked elements */
+    }
+    .parcela-row .form-group label,
+    .nfe-input-group label {
+        font-size: 13px; /* Smaller labels */
+    }
+    .parcela-row input,
+    .nfe-input-group input {
+        padding: 8px; /* Smaller inputs */
+        font-size: 14px;
+    }
+    .parcela-row .btn-danger {
+        height: auto; /* Let height adjust naturally */
     }
 }
+
+
+/* ========= INÍCIO DOS ESTILOS DA SPLASH SCREEN (Ajustes para Mobile e Desktop) ========= */
+
+#splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #0a0e12;
+    overflow: hidden;
+    font-family: 'Orbitron', sans-serif;
+    transition: opacity 0.5s ease-out;
+}
+
+#splash-screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#splash-screen .loader {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+}
+
+#splash-screen .loader .outer,
+#splash-screen .loader .middle,
+#splash-screen .loader .inner {
+    display: none;
+}
+
+#splash-screen .loader .icon {
+    position: relative;
+    color: #00ffff;
+    font-size: 10vw; /* Usando viewport width para escalonamento */
+    text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+    animation: iconPulse 2s ease-in-out infinite alternate;
+    margin-bottom: 20px;
+    max-width: 100px; /* Limite máximo para o ícone em telas maiores */
+    max-height: 100px;
+}
+
+@keyframes iconPulse {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.1); opacity: 0.8; }
+}
+
+#splash-screen .loader .text {
+    font-family: 'Share Tech Mono', monospace;
+    color: #fff;
+    font-size: 4vw; /* Usando viewport width para escalonamento */
+    position: relative;
+    text-transform: uppercase;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-shadow: 0 0 5px #fff, 0 0 10px #fff;
+    margin-bottom: 40px;
+    white-space: nowrap; /* Evita que o texto quebre linha em telas muito pequenas */
+    max-width: 400px; /* Limite máximo para o texto em telas maiores */
+    text-align: center;
+}
+
+#splash-screen .loader .text::before {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: #00ffff;
+    width: 0%;
+    overflow: hidden;
+    animation: textfill 2s steps(10) infinite;
+    text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff;
+}
+
+@keyframes textfill {
+    0%, 100% { width: 0%; }
+    50% { width: 100%; }
+}
+
+#splash-screen .loader .company-name {
+    font-family: 'Orbitron', sans-serif;
+    color: #fff;
+    font-size: 6vw; /* Usando viewport width para escalonamento */
+    margin-top: 0px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 5px;
+    text-shadow: 0 0 10px #fff, 0 0 20px #00ffff, 0 0 30px #00ffff;
+    text-align: center; /* Garante que o nome da empresa esteja centralizado */
+    max-width: 600px; /* Limite máximo para o nome da empresa em telas maiores */
+}
+
+#splash-screen .loader .tagline {
+    font-family: 'Share Tech Mono', monospace;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 3vw; /* Usando viewport width para escalonamento */
+    margin-top: 5px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+    margin-bottom: 20px;
+    text-align: center; /* Garante que a tagline esteja centralizada */
+    max-width: 500px; /* Limite máximo para a tagline em telas maiores */
+}
+
+#splash-screen .loader .loading-bar-container {
+    position: relative;
+    width: 60vw; /* Usando viewport width para escalonamento */
+    max-width: 200px; /* Mantém uma largura máxima para telas maiores */
+    height: 15px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 20px;
+    border: 1px solid rgba(0, 255, 255, 0.5);
+    box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+#splash-screen .loader .loading-bar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, #00ffff, #00ffff, transparent);
+    border-radius: 8px;
+    animation: loadingbarFill 4s ease-in-out forwards; /* DURAÇÃO DE 4 SEGUNDOS */
+    box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
+    transform: translateX(-100%);
+    animation-fill-mode: forwards;
+}
+
+@keyframes loadingbarFill {
+    0% { width: 0%; transform: translateX(-100%); }
+    20% { width: 40%; transform: translateX(-60%); }
+    80% { width: 80%; transform: translateX(-20%); }
+    100% { width: 100%; transform: translateX(0%); }
+}
+
+/* Ajustes específicos para telas muito pequenas para o texto da splash screen */
+@media (max-width: 480px) {
+    #splash-screen .loader .icon {
+        font-size: 15vw; /* Ícone maior em telas muito pequenas */
+    }
+    #splash-screen .loader .text {
+        font-size: 5vw;
+        letter-spacing: 2px;
+    }
+    #splash-screen .loader .company-name {
+        font-size: 8vw;
+        letter-spacing: 3px;
+    }
+    #splash-screen .loader .tagline {
+        font-size: 4vw;
+        letter-spacing: 1px;
+    }
+    #splash-screen .loader .loading-bar-container {
+        width: 80vw;
+    }
+}
+
+/* Ajustes para telas maiores (desktops) - Adicionado para evitar splash screen gigante */
+@media (min-width: 1200px) {
+    #splash-screen .loader .icon {
+        font-size: 80px; /* Tamanho fixo para o ícone em desktops */
+        max-width: none;
+        max-height: none;
+    }
+    #splash-screen .loader .text {
+        font-size: 32px; /* Tamanho fixo para o texto em desktops */
+        max-width: none;
+    }
+    #splash-screen .loader .company-name {
+        font-size: 48px; /* Tamanho fixo para o nome da empresa em desktops */
+        max-width: none;
+    }
+    #splash-screen .loader .tagline {
+        font-size: 24px; /* Tamanho fixo para a tagline em desktops */
+        max-width: none;
+    }
+    #splash-screen .loader .loading-bar-container {
+        width: 300px; /* Largura fixa para a barra de carregamento em desktops */
+    }
+}
+
+/* ========= FIM DOS ESTILOS DA SPLASH SCREEN ========= */
