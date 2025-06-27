@@ -7,12 +7,9 @@
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f0017">
-    <link rel="apple-touch-icon" href="assets/logo.png">
-
-    <link rel="stylesheet" href="style.css">
+    <link rel="apple-touch-icon" href="assets/icone.png"> <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="shortcut icon" href="assets/favicon.ico" type="image/x-icon">
-    <style>
+    <link rel="icon" href="assets/icone.png" type="image/png"> <style>
         /* Estilo para o status do Firebase no cabeçalho (MODIFICADO) */
         #cloud-status-container {
             text-align: right;
@@ -68,6 +65,20 @@
     </style>
 </head>
 <body>
+    <div id="splash-screen">
+        <div class="loader">
+            <div class="outer"></div>
+            <div class="middle"></div>
+            <div class="inner"></div>
+            <div class="icon"><i class="fas fa-lock"></i></div>
+            <div class="text" data-text="LOADING"></div>
+            <div class="company-name">GRUPO HENRIQUES</div>
+            <div class="tagline">Protegendo o que é seu</div>
+            <div class="loading-bar-container">
+                <div class="loading-bar"></div>
+            </div>
+        </div>
+    </div>
     <div class="app-wrapper">
         <header>
             <div class="logo-container">
@@ -414,5 +425,28 @@
             });
         }
     </script>
-</body>
+
+    <script>
+        window.addEventListener('load', () => {
+            const splash = document.getElementById('splash-screen');
+            const appWrapper = document.querySelector('.app-wrapper');
+
+            // Esconde a splash screen e mostra o app após 4 segundos
+            setTimeout(() => {
+                // Adiciona a classe para iniciar o fade-out da splash screen
+                splash.classList.add('hidden');
+
+                // Adiciona a classe para mostrar e iniciar o fade-in do app
+                appWrapper.classList.add('visible');
+
+                // Opcional: Remove completamente a splash screen do DOM
+                // após a animação de fade-out (500ms) terminar.
+                setTimeout(() => {
+                    splash.remove();
+                }, 500);
+
+            }, 4000); // 4000 milissegundos = 4 segundos
+        });
+    </script>
+    </body>
 </html>
