@@ -31,7 +31,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: flex-start; /* Alinha o conteúdo ao topo */
-    min-height: 100vh;
+    min-height: 100vh; /* Use 100vh para garantir que o body ocupe a altura da viewport */
     padding: 20px; /* Adiciona um padding geral ao body */
 }
 
@@ -47,9 +47,10 @@ body {
     background-color: var(--cor-card-fundo);
     box-shadow: 0 10px 30px var(--cor-sombra);
     border-radius: var(--border-radius-padrao);
-    overflow: hidden;
+    overflow: hidden; /* Manter overflow hidden aqui para bordas arredondadas e estética geral */
     border: 1px solid var(--cor-borda);
     transition: opacity 0.5s ease-in;
+    min-height: 100vh; /* Garante que o app-wrapper comece com pelo menos 100% da altura da viewport */
 }
 /* Classe adicionada via JS para mostrar o app */
 .app-wrapper.visible {
@@ -67,6 +68,7 @@ header {
     align-items: center;
     justify-content: space-between;
     width: 100%;
+    flex-shrink: 0; /* Impede o cabeçalho de encolher */
 }
 
 .logo-container {
@@ -565,6 +567,7 @@ footer {
     font-size: 14px;
     border-top: 1px solid var(--cor-borda);
     box-shadow: 0 -5px 15px var(--cor-sombra);
+    flex-shrink: 0; /* Impede o rodapé de encolher */
 }
 
 /* Utilitários */
@@ -764,16 +767,18 @@ footer {
     .app-wrapper {
         border-radius: 0; /* Remove bordas arredondadas em telas menores */
         box-shadow: none;
-        height: 100vh;
-        /* Ensure app-wrapper visible is always full height on small screens */
-        min-height: 100vh;
+        height: auto; /* MODIFICADO: Permite que a altura se ajuste ao conteúdo */
+        min-height: 100dvh; /* MODIFICADO: Usa 'dvh' para altura dinâmica da viewport */
         max-width: 100%;
+        overflow-y: auto; /* MODIFICADO: Adiciona rolagem vertical ao app-wrapper */
+        -webkit-overflow-scrolling: touch; /* Melhora a rolagem suave em iOS */
     }
 
     body {
         padding: 0; /* Remove padding do body em telas menores */
         align-items: flex-start; /* Ensure content starts from top */
-        min-height: 100vh;
+        min-height: 100dvh; /* MODIFICADO: Usa 'dvh' aqui também */
+        display: block; /* MODIFICADO: Muda o display do body para permitir rolagem natural do documento */
     }
 
     .container {
@@ -782,12 +787,12 @@ footer {
         border-radius: 0;
         box-shadow: none;
         flex-grow: 1;
-        overflow-y: hidden; /* Main content handles its own scroll now */
+        overflow-y: visible; /* MODIFICADO: Permite que o conteúdo do container transborde para o app-wrapper */
         min-height: auto; /* Let it grow naturally */
     }
      main {
         max-height: none; /* Remove a altura máxima para permitir rolagem natural */
-        overflow-y: visible; /* Allow content to overflow and body to scroll */
+        overflow-y: visible; /* MODIFICADO: Permite que o conteúdo do main transborde para o container pai */
         padding: 15px; /* Slightly reduce padding on main content */
     }
 
@@ -1157,3 +1162,4 @@ footer {
 }
 
 /* ========= FIM DOS ESTILOS DA SPLASH SCREEN ========= */
+
