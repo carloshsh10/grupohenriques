@@ -6,89 +6,10 @@
     <title>GRUPO HENRIQUES - Sistema de Orçamentos</title>
     
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1a1a2e">
-    <link rel="apple-touch-icon" href="assets/icone.png">
-    <link rel="stylesheet" href="style.css">
+    <meta name="theme-color" content="#0f0017">
+    <link rel="apple-touch-icon" href="assets/icone.png"> <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="icon" href="assets/icone.png" type="image/png">
-
-    <!-- ESTILOS ADICIONADOS PARA CORRIGIR SCROLL E SPLASH SCREEN -->
-    <style>
-        /*
-         * Reset e Layout Principal
-         * Estas regras corrigem o problema da barra de rolagem dupla e garantem
-         * uma transição suave da splash screen.
-        */
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            width: 100%;
-            overflow: hidden; /* Impede a barra de rolagem no corpo da página */
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            /* Cor de fundo que combina com a splash screen nativa do Android */
-            background-color: #1a1a2e; 
-        }
-
-        /*
-         * Container principal do App
-         * Usa Flexbox para organizar o layout (cabeçalho, conteúdo, rodapé)
-         * e ocupar 100% da altura da tela.
-        */
-        .app-wrapper {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            width: 100vw;
-        }
-
-        /*
-         * Container do conteúdo (Navegação + Principal)
-         * Ocupa o espaço restante entre o cabeçalho e o rodapé.
-        */
-        .container {
-            display: flex;
-            flex-grow: 1;
-            overflow: hidden; /* Impede que este container crie scrollbars */
-        }
-
-        /*
-         * Área de conteúdo principal
-         * Esta é a ÚNICA área que terá uma barra de rolagem vertical,
-         * resolvendo o problema da barra de rolagem dupla.
-        */
-        main {
-            flex-grow: 1;
-            overflow-y: auto; /* Habilita a rolagem vertical apenas aqui */
-            overflow-x: hidden; /* Desabilita a rolagem horizontal */
-        }
-        
-        /* Garante que a navegação lateral não tenha rolagem */
-        nav {
-            overflow: hidden;
-            flex-shrink: 0; /* Impede que a navegação encolha */
-        }
-
-        /* Estilos para a transição suave da splash screen */
-        #splash-screen.hidden {
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
-        }
-
-        .app-wrapper {
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.5s ease-in;
-        }
-
-        .app-wrapper.visible {
-            opacity: 1;
-            visibility: visible;
-        }
-    </style>
-    
-    <style>
+    <link rel="icon" href="assets/icone.png" type="image/png"> <style>
         /* Estilo para o status do Firebase no cabeçalho (MODIFICADO) */
         #cloud-status-container {
             text-align: right;
@@ -521,9 +442,7 @@
                 // Opcional: Remove completamente a splash screen do DOM
                 // após a animação de fade-out (500ms) terminar.
                 setTimeout(() => {
-                    if (splash) {
-                        splash.remove();
-                    }
+                    splash.remove();
                 }, 500);
 
             }, 4000); // 4000 milissegundos = 4 segundos
@@ -531,4 +450,3 @@
     </script>
     </body>
 </html>
-
