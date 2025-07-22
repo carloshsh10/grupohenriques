@@ -50,25 +50,28 @@ function configurarEventListeners() {
 
     document.getElementById('nav-clientes').classList.add('active');
 
-    // Formulários com Salvamento Automático
-    document.getElementById('cliente-form').addEventListener('input', salvarCliente);
-    document.getElementById('cliente-form').addEventListener('submit', (e) => e.preventDefault()); // Prevenir envio padrão
-    document.getElementById('produto-form').addEventListener('input', salvarProduto);
-    document.getElementById('produto-form').addEventListener('submit', (e) => e.preventDefault());
+    // Formulários com Salvamento e Limpeza
+    document.getElementById('cliente-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        salvarE䡊ovoCliente();
+    });
+    document.getElementById('produto-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        salvarE䡊ovoProduto();
+    });
     
-    // Botões de "Novo"
-    document.getElementById('novo-cliente-btn').addEventListener('click', novoCliente);
-    document.getElementById('novo-produto-btn').addEventListener('click', novoProduto);
-    document.getElementById('novo-faturamento-btn').addEventListener('click', novoFaturamento);
-
+    // Botões de "Novo" (Mantidos onde não há "Salvar & Novo")
+    // O botão 'novo-orcamento-btn' foi removido do HTML e sua funcionalidade será incorporada
+    // ao 'salvar-novo-orcamento-btn'.
+    // document.getElementById('novo-orcamento-btn').addEventListener('click', novoOrcamento);
 
     // Orçamento
     document.getElementById('orcamento-form').addEventListener('input', salvarDadosOrcamento);
     document.getElementById('adicionar-item-btn').addEventListener('click', openItemModal);
     document.getElementById('gerar-pdf-btn').addEventListener('click', () => gerarPDF(false));
-    document.getElementById('salvar-orcamento-btn').addEventListener('click', salvarOrcamentoAtual);
-    document.getElementById('novo-orcamento-btn').addEventListener('click', novoOrcamento);
-
+    // Event listener para o novo botão "Salvar & Novo Orçamento"
+    document.getElementById('salvar-novo-orcamento-btn').addEventListener('click', salvarE䡊ovoOrcamento);
+    
     // Modal de Item do Orçamento
     document.getElementById('item-form').addEventListener('submit', adicionarOuEditarItemOrcamento);
     document.querySelector('#itemModal .close-modal').addEventListener('click', closeModal);
@@ -96,7 +99,7 @@ function configurarEventListeners() {
 
     // Faturamento
     document.getElementById('add-parcela-btn').addEventListener('click', adicionarParcela);
-    document.getElementById('gerar-faturamento-pdf-btn').addEventListener('click', gerarEAnexarFaturamento);
+    document.getElementById('salvar-novo-faturamento-btn').addEventListener('click', salvarE䡊ovoFaturamento);
     document.getElementById('faturamento-orcamento-vinculado').addEventListener('change', preencherClienteFaturamento);
 
     // Nota Fornecedor - Event Listeners atualizados
@@ -121,9 +124,6 @@ function configurarEventListeners() {
             excluirChaveNFE(index);
         }
     });
-
-    // Backup
-    document.getElementById('importar-backup-file').addEventListener('change', handleFileUpload);
 
     // Firebase Login/Logout
     document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
@@ -163,7 +163,6 @@ function setupFirebaseAuthStateListener() {
             firebaseUser = user;
             updateFirebaseStatus('Conectado', 'green');
             
-            // 4ª e 5ª Modificação: Atualiza botões e status
             loginBtn.style.display = 'none';
             logoutBtn.style.display = 'inline-block';
             logoutBtn.style.backgroundColor = 'green';
@@ -175,7 +174,6 @@ function setupFirebaseAuthStateListener() {
             firebaseUser = null;
             updateFirebaseStatus('Desconectado', 'red');
 
-            // 4ª e 5ª Modificação: Atualiza botões e status
             loginBtn.style.display = 'inline-block';
             logoutBtn.style.display = 'none';
             loginBtn.style.backgroundColor = 'red';
@@ -286,7 +284,6 @@ async function loadDataFromFirestore() {
                 relatorio: "",
                 formasPagamento: "",
                 servicos: "",
-                faturamentoData: null,
                 nfeChaves: []
             };
         }
@@ -300,12 +297,10 @@ async function loadDataFromFirestore() {
 }
 
 function updateFirebaseStatus(message, color) {
-    // Status detalhado na aba de backup
     if(firebaseStatusElement) {
         firebaseStatusElement.textContent = message;
         firebaseStatusElement.style.color = color;
     }
-    // 5ª Modificação: Status global no cabeçalho
     if(firebaseCloudStatusElement) {
         firebaseCloudStatusElement.textContent = message;
         firebaseCloudStatusElement.style.color = color;
@@ -418,40 +413,44 @@ function formatarMoeda(valor) {
 }
 
 // Clientes
-function salvarCliente(event, isSubmit = false) {
+function salvarCliente() {
     const id = document.getElementById('cliente-id').value;
     const nome = document.getElementById('cliente-nome').value.trim();
-    const cpfCnpj = document.getElementById('cliente-cpf-cnpj').value.trim(); // Modificado
+    const cpfCnpj = document.getElementById('cliente-cpf-cnpj').value.trim();
     const telefone = document.getElementById('cliente-telefone').value.trim();
     const endereco = document.getElementById('cliente-endereco').value.trim();
 
     if (!nome) {
-        if (isSubmit) alert('O nome do cliente é obrigatório.');
-        return;
+        alert('O nome do cliente é obrigatório.');
+        return false;
     }
 
     if (id) {
         const index = clientes.findIndex(c => c.id === id);
         if (index !== -1) {
-            clientes[index] = { id, nome, cpfCnpj, telefone, endereco }; // Modificado
-            if (isSubmit) alert('Cliente atualizado com sucesso!');
+            clientes[index] = { id, nome, cpfCnpj, telefone, endereco };
+            alert('Cliente atualizado com sucesso!');
         }
     } else {
-        const novoCliente = { id: generateAlphanumericUniqueId(), nome, cpfCnpj, telefone, endereco }; // Modificado
+        const novoCliente = { id: generateAlphanumericUniqueId(), nome, cpfCnpj, telefone, endereco };
         clientes.push(novoCliente);
         document.getElementById('cliente-id').value = novoCliente.id;
-        if (isSubmit) alert('Cliente adicionado com sucesso!');
+        alert('Cliente adicionado com sucesso!');
     }
     saveData();
     renderizarClientes();
-    if (isSubmit) {
-        novoCliente();
-    }
+    return true;
 }
 
 function novoCliente() {
     document.getElementById('cliente-form').reset();
     document.getElementById('cliente-id').value = '';
+}
+
+function salvarE䡊ovoCliente() {
+    if (salvarCliente()) {
+        novoCliente();
+    }
 }
 
 function renderizarClientes() {
@@ -460,7 +459,7 @@ function renderizarClientes() {
     clientes.forEach(cliente => {
         const row = tbody.insertRow();
         row.insertCell().textContent = cliente.nome;
-        row.insertCell().textContent = cliente.cpfCnpj || 'N/A'; // Modificado
+        row.insertCell().textContent = cliente.cpfCnpj || 'N/A';
         row.insertCell().textContent = cliente.telefone || 'N/A';
         row.insertCell().textContent = cliente.endereco || 'N/A';
         const acoesCell = row.insertCell();
@@ -477,7 +476,7 @@ function editarCliente(id) {
     if (cliente) {
         document.getElementById('cliente-id').value = cliente.id;
         document.getElementById('cliente-nome').value = cliente.nome;
-        document.getElementById('cliente-cpf-cnpj').value = cliente.cpfCnpj; // Modificado
+        document.getElementById('cliente-cpf-cnpj').value = cliente.cpfCnpj;
         document.getElementById('cliente-telefone').value = cliente.telefone;
         document.getElementById('cliente-endereco').value = cliente.endereco;
         showSection('clientes');
@@ -496,7 +495,7 @@ function excluirCliente(id) {
 }
 
 // Produtos
-function salvarProduto(event, isSubmit = false) {
+function salvarProduto() {
     const id = document.getElementById('produto-id').value;
     const nomeProposta = document.getElementById('produto-nome-proposta').value.trim();
     const nomeReal = document.getElementById('produto-nome-real').value.trim();
@@ -504,13 +503,13 @@ function salvarProduto(event, isSubmit = false) {
     const valorInput = document.getElementById('produto-valor').value;
 
     if (!nomeProposta) {
-        if(isSubmit) alert('O "Nome para Proposta" é obrigatório.');
-        return;
+        alert('O "Nome para Proposta" é obrigatório.');
+        return false;
     }
     const valor = parseFloat(valorInput);
-    if ((isNaN(valor) || valor < 0) && isSubmit) {
+    if (isNaN(valor) || valor < 0) {
         alert('O valor do produto deve ser um número válido.');
-        return;
+        return false;
     }
 
     const categoria = categoriaInput || 'Geral';
@@ -524,18 +523,19 @@ function salvarProduto(event, isSubmit = false) {
 
     if (id) {
         const index = produtos.findIndex(p => p.id === id);
-        if (index !== -1) produtos[index] = produtoData;
+        if (index !== -1) {
+            produtos[index] = produtoData;
+            alert('Produto atualizado!');
+        }
     } else {
         produtos.push(produtoData);
         document.getElementById('produto-id').value = produtoData.id;
+        alert('Produto adicionado!');
     }
-    if(isSubmit) alert(id ? 'Produto atualizado!' : 'Produto adicionado!');
-
+    
     saveData(); 
     renderizarProdutosPorCategoria();
-    if (isSubmit) {
-        novoProduto();
-    }
+    return true;
 }
 
 function novoProduto() {
@@ -543,6 +543,11 @@ function novoProduto() {
     document.getElementById('produto-id').value = '';
 }
 
+function salvarE䡊ovoProduto() {
+    if (salvarProduto()) {
+        novoProduto();
+    }
+}
 
 function renderizarProdutosPorCategoria() {
     const container = document.getElementById('categorias-container');
@@ -731,8 +736,8 @@ function carregarOrcamentoAtual() {
 }
 
 function salvarOrcamentoAtual() {
-    if (!currentOrcamento.clienteId) { alert('Selecione um cliente.'); return; }
-    if (currentOrcamento.itens.length === 0) { alert('Adicione pelo menos um item.'); return; }
+    if (!currentOrcamento.clienteId) { alert('Selecione um cliente.'); return false; } // Retorna false para indicar falha
+    if (currentOrcamento.itens.length === 0) { alert('Adicione pelo menos um item.'); return false; } // Retorna false para indicar falha
 
     currentOrcamento.data = new Date().toISOString();
     salvarDadosOrcamento(); 
@@ -746,19 +751,28 @@ function salvarOrcamentoAtual() {
     saveData();
     renderizarOrcamentosSalvos();
     alert(`Orçamento ${currentOrcamento.id} salvo com sucesso!`);
+    return true; // Retorna true para indicar sucesso
 }
 
 function novoOrcamento() {
-    if (confirm('Deseja iniciar um novo orçamento? As alterações não salvas no orçamento atual serão perdidas.')) {
-        currentOrcamento = {
-            id: generateSequentialId(),
-            clienteId: null, itens: [], maoDeObra: 0, relatorio: "", formasPagamento: "", servicos: "", faturamentoData: null, nfeChaves: []
-        };
-        saveData();
-        carregarOrcamentoAtual();
-        alert('Novo orçamento iniciado com ID: ' + currentOrcamento.id);
+    currentOrcamento = {
+        id: generateSequentialId(),
+        clienteId: null, itens: [], maoDeObra: 0, relatorio: "", formasPagamento: "", servicos: "", faturamentoData: null, nfeChaves: []
+    };
+    saveData();
+    carregarOrcamentoAtual();
+    alert('Novo orçamento iniciado com ID: ' + currentOrcamento.id);
+}
+
+// Nova função para Salvar e Novo Orçamento
+function salvarE䡊ovoOrcamento() {
+    if (salvarOrcamentoAtual()) { // Se o salvamento for bem-sucedido
+        if (confirm('Deseja iniciar um novo orçamento?')) { // Confirmação antes de iniciar um novo
+            novoOrcamento();
+        }
     }
 }
+
 
 function renderizarOrcamentosSalvos() {
     const ul = document.getElementById('lista-orcamentos');
@@ -846,10 +860,10 @@ function adicionarParcela() {
 
 function gerarEAnexarFaturamento() {
     const orcamentoId = document.getElementById('faturamento-orcamento-vinculado').value;
-    if (!orcamentoId) { alert('Selecione um orçamento para vincular o faturamento.'); return; }
+    if (!orcamentoId) { alert('Selecione um orçamento para vincular o faturamento.'); return false; }
 
     const orcIndex = orcamentos.findIndex(o => o.id === orcamentoId);
-    if (orcIndex === -1) { alert('Orçamento não encontrado.'); return; }
+    if (orcIndex === -1) { alert('Orçamento não encontrado.'); return false; }
 
     const faturamentoData = {
         clienteId: orcamentos[orcIndex].clienteId,
@@ -863,7 +877,7 @@ function gerarEAnexarFaturamento() {
     };
 
     if (!faturamentoData.localServico || !faturamentoData.tipoServico) {
-        alert('Preencha o Local e o Tipo de Serviço.'); return;
+        alert('Preencha o Local e o Tipo de Serviço.'); return false;
     }
 
     orcamentos[orcIndex].faturamentoData = faturamentoData;
@@ -871,14 +885,20 @@ function gerarEAnexarFaturamento() {
     gerarFaturamentoPDF(faturamentoData);
     renderizarOrcamentosSalvos();
     renderizarFaturamentosGerados();
-    novoFaturamento();
     alert('Faturamento gerado e anexado ao orçamento com sucesso!');
+    return true;
 }
 
 function novoFaturamento() {
     document.getElementById('faturamento-form').reset();
     document.getElementById('faturamento-parcelas-container').innerHTML = '';
     document.getElementById('faturamento-cliente-nome').value = '';
+}
+
+function salvarE䡊ovoFaturamento() {
+    if (gerarEAnexarFaturamento()) {
+        novoFaturamento();
+    }
 }
 
 function visualizarFaturamento(orcamentoId) {
@@ -1219,3 +1239,4 @@ function carregarProdutosNoModalPorCategoria() {
         select.innerHTML += `<option value="${p.id}" data-valor="${p.valor}">${p.nomeProposta} ${valorDisplay}</option>`;
     });
 }
+

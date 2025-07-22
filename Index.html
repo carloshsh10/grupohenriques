@@ -129,8 +129,7 @@
                             <input type="text" id="cliente-endereco">
                         </div>
                         <div class="form-actions">
-                            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Cliente</button>
-                            <button type="button" id="novo-cliente-btn" class="btn-secondary"><i class="fas fa-plus"></i> Novo Cliente</button>
+                            <button type="submit" id="salvar-novo-cliente-btn" class="btn-primary"><i class="fas fa-save"></i> Salvar & Novo</button>
                         </div>
                     </form>
                     <div class="table-container">
@@ -171,8 +170,7 @@
                             <input type="number" id="produto-valor" step="0.01" min="0" required>
                         </div>
                         <div class="form-actions">
-                            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Produto</button>
-                            <button type="button" id="novo-produto-btn" class="btn-secondary"><i class="fas fa-plus"></i> Novo Produto</button>
+                            <button type="submit" id="salvar-novo-produto-btn" class="btn-primary"><i class="fas fa-save"></i> Salvar & Novo</button>
                         </div>
                     </form>
                     
@@ -210,8 +208,8 @@
                         </div>
                         <button type="button" id="adicionar-item-btn" class="btn-secondary"><i class="fas fa-plus-circle"></i> Adicionar Item</button>
                         <button type="button" id="gerar-pdf-btn" class="btn-primary"><i class="fas fa-file-pdf"></i> Gerar PDF</button>
-                        <button type="button" id="salvar-orcamento-btn" class="btn-primary"><i class="fas fa-save"></i> Salvar Orçamento</button>
-                        <button type="button" id="novo-orcamento-btn" class="btn-secondary"><i class="fas fa-file-alt"></i> Novo Orçamento</button>
+                        <!-- Botão Salvar & Novo Orçamento -->
+                        <button type="button" id="salvar-novo-orcamento-btn" class="btn-primary"><i class="fas fa-save"></i> Salvar & Novo Orçamento</button>
                     </form>
 
                     <h3>Itens do Orçamento</h3>
@@ -272,8 +270,7 @@
                         
                         <div class="form-actions mt-20">
                              <button type="button" id="add-parcela-btn" class="btn-secondary"><i class="fas fa-plus"></i> Adicionar Parcela</button>
-                             <button type="button" id="gerar-faturamento-pdf-btn" class="btn-primary"><i class="fas fa-file-pdf"></i> Gerar e Salvar Faturamento</button>
-                             <button type="button" id="novo-faturamento-btn" class="btn-secondary"><i class="fas fa-file-alt"></i> Novo Faturamento</button>
+                             <button type="button" id="salvar-novo-faturamento-btn" class="btn-primary"><i class="fas fa-file-pdf"></i> Salvar & Novo Faturamento</button>
                         </div>
                     </form>
                     <h3 class="mt-20">Faturamentos Gerados</h3>
@@ -450,3 +447,4 @@
     </script>
     </body>
 </html>
+
