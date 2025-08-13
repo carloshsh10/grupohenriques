@@ -60,25 +60,20 @@ function configurarEventListeners() {
         salvarE䡊ovoProduto();
     });
     
-    // Botões de "Novo" (Mantidos onde não há "Salvar & Novo")
-    // O botão 'novo-orcamento-btn' foi removido do HTML e sua funcionalidade será incorporada
-    // ao 'salvar-novo-orcamento-btn'.
-    // document.getElementById('novo-orcamento-btn').addEventListener('click', novoOrcamento);
-
     // Orçamento
     document.getElementById('orcamento-form').addEventListener('input', salvarDadosOrcamento);
-    document.getElementById('adicionar-item-btn').addEventListener('click', openItemModal);
+    document.getElementById('adicionar-item-btn').addEventListener('click', () => openItemModal(-1, 'current'));
     document.getElementById('gerar-pdf-btn').addEventListener('click', () => gerarPDF(false));
-    // Event listener para o novo botão "Salvar & Novo Orçamento"
     document.getElementById('salvar-novo-orcamento-btn').addEventListener('click', salvarE䡊ovoOrcamento);
     
     // Modal de Item do Orçamento
     document.getElementById('item-form').addEventListener('submit', adicionarOuEditarItemOrcamento);
-    document.querySelector('#itemModal .close-modal').addEventListener('click', closeModal);
-    window.addEventListener('click', (event) => {
-        if (event.target == document.getElementById('itemModal')) closeModal();
-    });
+    document.querySelector('#itemModal .close-modal').addEventListener('click', () => closeModal('itemModal'));
     document.getElementById('modal-item-categoria').addEventListener('change', carregarProdutosNoModalPorCategoria);
+    
+    // CORREÇÃO 1: Adicionar event listener para o novo botão de excluir no modal de item
+    document.getElementById('delete-item-btn').addEventListener('click', excluirItemPeloModal);
+
 
     const selectModalProduto = document.getElementById('modal-produto');
     selectModalProduto.addEventListener('change', function() {
@@ -93,10 +88,7 @@ function configurarEventListeners() {
 
     // Modal de Produtos por Categoria
     document.getElementById('close-produtos-categoria-modal').addEventListener('click', closeProdutosCategoriaModal);
-    window.addEventListener('click', (event) => {
-        if (event.target == document.getElementById('produtosCategoriaModal')) closeProdutosCategoriaModal();
-    });
-
+    
     // Faturamento
     document.getElementById('add-parcela-btn').addEventListener('click', adicionarParcela);
     document.getElementById('salvar-novo-faturamento-btn').addEventListener('click', salvarE䡊ovoFaturamento);
@@ -105,7 +97,6 @@ function configurarEventListeners() {
     // Nota Fornecedor - Event Listeners atualizados
     document.getElementById('nfe-orcamento-vinculado').addEventListener('change', carregarChavesNFEParaOrcamentoSelecionado);
 
-    // Event listener para os botões de salvar/editar/gerar NFE (delegado para o painel)
     document.getElementById('nfe-management-panel').addEventListener('click', (event) => {
         const targetButton = event.target.closest('button');
         if (!targetButton) return;
@@ -128,14 +119,21 @@ function configurarEventListeners() {
     // Firebase Login/Logout
     document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
     document.getElementById('google-logout-btn').addEventListener('click', signOutGoogle);
+
+    // CORREÇÃO 2: Event Listeners para o novo modal de edição de orçamento
+    document.getElementById('close-edit-orcamento-modal').addEventListener('click', () => closeModal('editOrcamentoModal'));
+    document.getElementById('save-orcamento-changes-btn').addEventListener('click', salvarAlteracoesOrcamentoPeloModal);
+    
+    // CORREÇÃO 3: Event Listeners para o modal de confirmação de exclusão (swipe)
+    configurarSwipeParaExcluir();
 }
 
-// Funções Firebase
+
+// Funções Firebase (sem alterações)
 async function signInWithGoogle() {
     try {
         const provider = new window.GoogleAuthProvider();
         await window.signInWithPopup(window.firebaseAuth, provider);
-        // onAuthStateChanged will handle the UI update and data loading
     } catch (error) {
         console.error("Erro no login com Google: ", error);
         updateFirebaseStatus('Erro de Conexão', 'red');
@@ -146,7 +144,6 @@ async function signInWithGoogle() {
 async function signOutGoogle() {
     try {
         await window.signOut(window.firebaseAuth);
-        // onAuthStateChanged will handle the UI update and data loading
     } catch (error) {
         console.error("Erro no logout: ", error);
         updateFirebaseStatus('Erro ao Desconectar', 'red');
@@ -307,7 +304,6 @@ function updateFirebaseStatus(message, color) {
     }
 }
 
-// Funções de Local Storage (mantidas como fallback/backup)
 function salvarNoLocalStorage(key, data) {
     localStorage.setItem(key, JSON.stringify(data));
 }
@@ -379,7 +375,7 @@ function carregarDadosIniciais() {
 }
 
 function showSection(sectionId) {
-    document.querySelectorAll('section').forEach(section => {
+    document.querySelectorAll('main > section').forEach(section => {
         section.classList.remove('active');
     });
     document.getElementById(sectionId + '-section').classList.add('active');
@@ -412,7 +408,7 @@ function formatarMoeda(valor) {
     return 'R$ ' + parseFloat(valor).toFixed(2).replace('.', ',');
 }
 
-// Clientes
+// Clientes (sem alterações)
 function salvarCliente() {
     const id = document.getElementById('cliente-id').value;
     const nome = document.getElementById('cliente-nome').value.trim();
@@ -494,7 +490,7 @@ function excluirCliente(id) {
     }
 }
 
-// Produtos
+// Produtos (sem alterações)
 function salvarProduto() {
     const id = document.getElementById('produto-id').value;
     const nomeProposta = document.getElementById('produto-nome-proposta').value.trim();
@@ -681,22 +677,67 @@ function adicionarOuEditarItemOrcamento(event) {
     if (isNaN(valor) || valor < 0) { alert('Valor inválido.'); return; }
 
     const newItem = { produtoId, produtoNome: produto.nomeProposta, quantidade, valor };
-    if (isEditingItem && editingItemIndex > -1) {
-        currentOrcamento.itens[editingItemIndex] = newItem;
-    } else {
-        currentOrcamento.itens.push(newItem);
+    
+    // CORREÇÃO 1: Identificar se a edição é no orçamento atual ou no modal de edição
+    const modal = document.getElementById('itemModal');
+    const source = modal.dataset.source; // 'current' or 'edit'
+
+    if (source === 'current') {
+        if (isEditingItem && editingItemIndex > -1) {
+            currentOrcamento.itens[editingItemIndex] = newItem;
+        } else {
+            currentOrcamento.itens.push(newItem);
+        }
+        renderizarItensOrcamento();
+        calcularTotaisOrcamento();
+    } else if (source === 'edit') {
+        const orcamentoId = document.getElementById('edit-orcamento-id').value;
+        const orcIndex = orcamentos.findIndex(o => o.id === orcamentoId);
+        if (orcIndex === -1) return;
+        
+        if (isEditingItem && editingItemIndex > -1) {
+            orcamentos[orcIndex].itens[editingItemIndex] = newItem;
+        } else {
+            orcamentos[orcIndex].itens.push(newItem);
+        }
+        renderizarItensOrcamentoModalEdicao(orcamentos[orcIndex]);
     }
+
     saveData();
-    renderizarItensOrcamento();
-    calcularTotaisOrcamento();
-    closeModal();
+    closeModal('itemModal');
 }
+
+// CORREÇÃO 1: Função para excluir item, chamada pelo botão no modal de edição
+function excluirItemPeloModal() {
+    const modal = document.getElementById('itemModal');
+    const source = modal.dataset.source; // 'current' ou 'edit'
+    const itemIndex = editingItemIndex;
+
+    if (itemIndex > -1 && confirm('Tem certeza que deseja remover este item do orçamento?')) {
+        if (source === 'current') {
+            currentOrcamento.itens.splice(itemIndex, 1);
+            renderizarItensOrcamento();
+            calcularTotaisOrcamento();
+        } else if (source === 'edit') {
+            const orcamentoId = document.getElementById('edit-orcamento-id').value;
+            const orc = orcamentos.find(o => o.id === orcamentoId);
+            if (orc) {
+                orc.itens.splice(itemIndex, 1);
+                renderizarItensOrcamentoModalEdicao(orc);
+            }
+        }
+        saveData();
+        closeModal('itemModal');
+    }
+}
+
 
 function renderizarItensOrcamento() {
     const tbody = document.querySelector('#orcamento-itens-tabela tbody');
     tbody.innerHTML = '';
     if (!currentOrcamento.itens) currentOrcamento.itens = [];
     currentOrcamento.itens.forEach((item, index) => {
+        // CORREÇÃO 1: Removido o botão de excluir da linha da tabela. Ação agora é centralizada no botão editar.
         tbody.innerHTML += `
             <tr>
                 <td>${item.produtoNome}</td>
@@ -704,8 +745,7 @@ function renderizarItensOrcamento() {
                 <td>${formatarMoeda(item.valor)}</td>
                 <td style="text-align: right;">${formatarMoeda(item.quantidade * item.valor)}</td>
                 <td style="text-align: center;">
-                    <button class="btn-editar" onclick="openItemModal(${index})"><i class="fas fa-edit"></i></button>
-                    <button class="btn-excluir" onclick="excluirItemOrcamento(${index})"><i class="fas fa-trash-alt"></i></button>
+                    <button class="btn-editar" onclick="openItemModal(${index}, 'current')"><i class="fas fa-edit"></i></button>
                 </td>
             </tr>
         `;
@@ -736,8 +776,8 @@ function carregarOrcamentoAtual() {
 }
 
 function salvarOrcamentoAtual() {
-    if (!currentOrcamento.clienteId) { alert('Selecione um cliente.'); return false; } // Retorna false para indicar falha
-    if (currentOrcamento.itens.length === 0) { alert('Adicione pelo menos um item.'); return false; } // Retorna false para indicar falha
+    if (!currentOrcamento.clienteId) { alert('Selecione um cliente.'); return false; }
+    if (currentOrcamento.itens.length === 0) { alert('Adicione pelo menos um item.'); return false; }
 
     currentOrcamento.data = new Date().toISOString();
     salvarDadosOrcamento(); 
@@ -751,7 +791,7 @@ function salvarOrcamentoAtual() {
     saveData();
     renderizarOrcamentosSalvos();
     alert(`Orçamento ${currentOrcamento.id} salvo com sucesso!`);
-    return true; // Retorna true para indicar sucesso
+    return true;
 }
 
 function novoOrcamento() {
@@ -764,10 +804,9 @@ function novoOrcamento() {
     alert('Novo orçamento iniciado com ID: ' + currentOrcamento.id);
 }
 
-// Nova função para Salvar e Novo Orçamento
 function salvarE䡊ovoOrcamento() {
-    if (salvarOrcamentoAtual()) { // Se o salvamento for bem-sucedido
-        if (confirm('Deseja iniciar um novo orçamento?')) { // Confirmação antes de iniciar um novo
+    if (salvarOrcamentoAtual()) {
+        if (confirm('Deseja iniciar um novo orçamento?')) {
             novoOrcamento();
         }
     }
@@ -785,8 +824,8 @@ function renderizarOrcamentosSalvos() {
             <li>
                 <span>${cliente ? cliente.nome : 'Cliente Desconhecido'} - ${dataFmt} (Nº: ${orc.id})</span>
                 <div>
-                    <button class="btn-editar" onclick="carregarOrcamentoSalvo('${orc.id}')" title="Abrir"><i class="fas fa-folder-open"></i></button>
-                    <button class="btn-excluir" onclick="excluirOrcamentoSalvo('${orc.id}')" title="Excluir"><i class="fas fa-trash-alt"></i></button>
+                    <button class="btn-editar" onclick="abrirModalEdicaoOrcamento('${orc.id}')" title="Abrir/Editar"><i class="fas fa-folder-open"></i></button>
+                    <button class="btn-excluir" onclick="iniciarExclusaoOrcamento('${orc.id}')" title="Excluir"><i class="fas fa-trash-alt"></i></button>
                     <button class="btn-preview" onclick="previewOrcamento('${orc.id}')" title="Preview Proposta"><i class="fas fa-file-pdf"></i></button>
                     <button class="btn-faturamento ${orc.faturamentoData ? 'active' : ''}" onclick="visualizarFaturamento('${orc.id}')" title="Ver Faturamento"><i class="fas fa-file-invoice"></i></button>
                     <button class="btn-nfe ${hasNFE ? 'active' : ''}" onclick="visualizarNFE('${orc.id}')" title="Ver NFE"><i class="fas fa-receipt"></i></button>
@@ -796,37 +835,177 @@ function renderizarOrcamentosSalvos() {
     });
 }
 
-function carregarOrcamentoSalvo(id) {
+// CORREÇÃO 2: Função que ABRE O MODAL de edição, substituindo a antiga `carregarOrcamentoSalvo`
+function abrirModalEdicaoOrcamento(id) {
     const orc = orcamentos.find(o => o.id === id);
-    if(orc) {
-        if(confirm('Deseja carregar este orçamento? As alterações não salvas no formulário atual serão perdidas.')) {
-            currentOrcamento = { ...orc };
-            if (!Array.isArray(currentOrcamento.nfeChaves)) {
-                currentOrcamento.nfeChaves = [];
-            } else {
-                currentOrcamento.nfeChaves = currentOrcamento.nfeChaves.map(entry => {
-                    if (typeof entry === 'string') {
-                        return { chave: entry, fornecedor: '' };
-                    }
-                    return entry;
-                }).filter(entry => entry !== null && entry !== undefined);
-            }
-            saveData();
-            carregarOrcamentoAtual();
-            document.querySelector('#nav-orcamentos').click();
-            alert(`Orçamento ${id} carregado.`);
-        }
+    if (!orc) {
+        alert('Orçamento não encontrado!');
+        return;
     }
+
+    // Preencher os campos do modal de edição
+    document.getElementById('edit-orcamento-id').value = orc.id;
+    document.getElementById('edit-orcamento-modal-title').textContent = `Editar Orçamento Nº ${orc.id}`;
+    
+    // Carregar clientes no select do modal e selecionar o correto
+    carregarClientesNoSelect('edit-orcamento-cliente');
+    document.getElementById('edit-orcamento-cliente').value = orc.clienteId;
+
+    document.getElementById('edit-orcamento-servicos').value = orc.servicos || '';
+    document.getElementById('edit-orcamento-mao-de-obra').value = orc.maoDeObra > 0 ? orc.maoDeObra.toFixed(2) : '';
+    document.getElementById('edit-orcamento-relatorio').value = orc.relatorio || '';
+    document.getElementById('edit-orcamento-formas-pagamento').value = orc.formasPagamento || '';
+
+    // Renderizar itens e totais no modal
+    renderizarItensOrcamentoModalEdicao(orc);
+    
+    // Abrir o modal
+    document.getElementById('editOrcamentoModal').classList.add('active');
 }
 
-function excluirOrcamentoSalvo(id) {
-    if (confirm('Tem certeza que deseja excluir permanentemente este orçamento?')) {
-        orcamentos = orcamentos.filter(o => o.id !== id);
-        saveData();
-        renderizarOrcamentosSalvos();
-        if (currentOrcamento.id === id) novoOrcamento();
-        alert('Orçamento excluído!');
+// CORREÇÃO 2: Função para renderizar os itens DENTRO do modal de edição
+function renderizarItensOrcamentoModalEdicao(orc) {
+    const tbody = document.querySelector('#edit-orcamento-itens-tabela tbody');
+    tbody.innerHTML = '';
+    if (!orc.itens) orc.itens = [];
+
+    orc.itens.forEach((item, index) => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${item.produtoNome}</td>
+                <td>${item.quantidade}</td>
+                <td>${formatarMoeda(item.valor)}</td>
+                <td style="text-align: right;">${formatarMoeda(item.quantidade * item.valor)}</td>
+                <td style="text-align: center;">
+                    <button class="btn-editar" onclick="openItemModal(${index}, 'edit')"><i class="fas fa-edit"></i></button>
+                </td>
+            </tr>
+        `;
+    });
+    calcularTotaisOrcamentoModalEdicao(orc);
+}
+
+// CORREÇÃO 2: Função para calcular os totais DENTRO do modal de edição
+function calcularTotaisOrcamentoModalEdicao(orc) {
+    const maoDeObra = parseFloat(document.getElementById('edit-orcamento-mao-de-obra').value) || 0;
+    const totalProdutos = orc.itens.reduce((sum, item) => sum + (item.quantidade * item.valor), 0);
+    const totalGeral = totalProdutos + maoDeObra;
+    document.getElementById('edit-total-produtos').textContent = formatarMoeda(totalProdutos);
+    document.getElementById('edit-total-geral').textContent = formatarMoeda(totalGeral);
+}
+
+
+// CORREÇÃO 2: Função para salvar as alterações feitas no modal de edição
+function salvarAlteracoesOrcamentoPeloModal() {
+    const orcamentoId = document.getElementById('edit-orcamento-id').value;
+    const orcIndex = orcamentos.findIndex(o => o.id === orcamentoId);
+
+    if (orcIndex === -1) {
+        alert('Erro: Orçamento não encontrado para salvar.');
+        return;
     }
+
+    // Atualizar os dados do orçamento com os valores do modal
+    orcamentos[orcIndex].clienteId = document.getElementById('edit-orcamento-cliente').value;
+    orcamentos[orcIndex].servicos = document.getElementById('edit-orcamento-servicos').value;
+    orcamentos[orcIndex].maoDeObra = parseFloat(document.getElementById('edit-orcamento-mao-de-obra').value) || 0;
+    orcamentos[orcIndex].relatorio = document.getElementById('edit-orcamento-relatorio').value;
+    orcamentos[orcIndex].formasPagamento = document.getElementById('edit-orcamento-formas-pagamento').value;
+    
+    saveData();
+    renderizarOrcamentosSalvos();
+    closeModal('editOrcamentoModal');
+    alert('Orçamento atualizado com sucesso!');
+}
+
+
+// CORREÇÃO 3: Função que inicia o processo de exclusão, abrindo o modal de swipe
+function iniciarExclusaoOrcamento(id) {
+    const modal = document.getElementById('swipe-confirm-modal');
+    modal.dataset.orcamentoId = id; // Armazena o ID do orçamento a ser excluído
+    modal.classList.add('active');
+}
+
+// CORREÇÃO 3: Função que configura toda a lógica do "arrastar para excluir"
+function configurarSwipeParaExcluir() {
+    const modal = document.getElementById('swipe-confirm-modal');
+    const container = document.getElementById('swipe-container');
+    const handle = document.getElementById('swipe-handle');
+    const cancelBtn = document.getElementById('swipe-cancel-btn');
+    let isDragging = false;
+    
+    const resetSwipe = () => {
+        handle.style.transition = 'left 0.3s ease';
+        handle.style.left = '0px';
+        container.classList.remove('confirmed');
+    };
+
+    const onDragStart = () => {
+        isDragging = true;
+        handle.style.transition = 'none'; // Remove transição durante o arrasto
+    };
+
+    const onDragMove = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const rect = container.getBoundingClientRect();
+        let newLeft = clientX - rect.left - (handle.offsetWidth / 2);
+
+        // Limites
+        if (newLeft < 0) newLeft = 0;
+        const maxLeft = container.offsetWidth - handle.offsetWidth;
+        if (newLeft > maxLeft) {
+            newLeft = maxLeft;
+        }
+        handle.style.left = `${newLeft}px`;
+    };
+
+    const onDragEnd = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        const maxLeft = container.offsetWidth - handle.offsetWidth;
+        const currentLeft = parseInt(handle.style.left, 10);
+
+        if (currentLeft >= maxLeft * 0.9) { // Se arrastou 90% do caminho
+            handle.style.left = `${maxLeft}px`;
+            container.classList.add('confirmed');
+            setTimeout(() => {
+                excluirOrcamentoSalvo(modal.dataset.orcamentoId);
+                closeModal('swipe-confirm-modal');
+                resetSwipe();
+            }, 300);
+        } else {
+            resetSwipe();
+        }
+    };
+
+    // Eventos de Mouse
+    handle.addEventListener('mousedown', onDragStart);
+    document.addEventListener('mousemove', onDragMove);
+    document.addEventListener('mouseup', onDragEnd);
+    
+    // Eventos de Toque
+    handle.addEventListener('touchstart', onDragStart);
+    document.addEventListener('touchmove', onDragMove, { passive: false });
+    document.addEventListener('touchend', onDragEnd);
+
+    cancelBtn.addEventListener('click', () => {
+        closeModal('swipe-confirm-modal');
+        resetSwipe();
+    });
+}
+
+// CORREÇÃO 3: Lógica de exclusão refatorada. Agora é chamada APÓS a confirmação no modal.
+function excluirOrcamentoSalvo(id) {
+    orcamentos = orcamentos.filter(o => o.id !== id);
+    saveData();
+    renderizarOrcamentosSalvos();
+    renderizarFaturamentosGerados(); // Atualiza a lista de faturamentos caso o orçamento excluído tivesse um.
+    if (currentOrcamento.id === id) {
+        novoOrcamento();
+    }
+    alert('Orçamento excluído permanentemente!');
 }
 
 function previewOrcamento(id) {
@@ -834,7 +1013,7 @@ function previewOrcamento(id) {
     if(orc) gerarPDF(true, orc); else alert('Orçamento não encontrado.');
 }
 
-// Faturamento
+// Faturamento (sem alterações)
 function preencherClienteFaturamento() {
     const orcamentoId = document.getElementById('faturamento-orcamento-vinculado').value;
     const nomeClienteInput = document.getElementById('faturamento-cliente-nome');
@@ -979,7 +1158,7 @@ function renderizarFaturamentosGerados() {
     });
 }
 
-// Nota Fornecedor (NFE)
+// Nota Fornecedor (sem alterações)
 const MAX_NFE_CHAVES = 3; 
 
 function carregarChavesNFEParaOrcamentoSelecionado() {
@@ -1191,17 +1370,28 @@ function visualizarNFE(orcamentoId) {
 }
 
 // Funções de Modal
-function openItemModal(itemIndex = -1) {
+// CORREÇÃO 1 e 2: `openItemModal` agora aceita um segundo parâmetro `source` para saber de onde foi chamado
+function openItemModal(itemIndex = -1, source = 'current') {
     const modal = document.getElementById('itemModal');
+    modal.dataset.source = source; // Armazena a origem da chamada
     const form = document.getElementById('item-form');
     form.reset();
     isEditingItem = itemIndex > -1;
     editingItemIndex = itemIndex;
 
+    const deleteBtn = document.getElementById('delete-item-btn');
     carregarCategoriasNoModalItem();
 
-    if (isEditingItem && currentOrcamento.itens[itemIndex]) {
-        const item = currentOrcamento.itens[itemIndex];
+    let orcamentoDeOrigem;
+    if (source === 'current') {
+        orcamentoDeOrigem = currentOrcamento;
+    } else {
+        const orcamentoId = document.getElementById('edit-orcamento-id').value;
+        orcamentoDeOrigem = orcamentos.find(o => o.id === orcamentoId);
+    }
+
+    if (isEditingItem && orcamentoDeOrigem && orcamentoDeOrigem.itens[itemIndex]) {
+        const item = orcamentoDeOrigem.itens[itemIndex];
         const produto = produtos.find(p => p.id === item.produtoId);
         document.getElementById('modal-item-categoria').value = produto ? (produto.categoria || 'Geral') : '';
         carregarProdutosNoModalPorCategoria();
@@ -1210,16 +1400,19 @@ function openItemModal(itemIndex = -1) {
         document.getElementById('modal-valor').value = item.valor.toFixed(2);
         modal.querySelector('h3').textContent = 'Editar Item';
         modal.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-edit"></i> Atualizar Item';
+        deleteBtn.style.display = 'inline-block'; // Mostra o botão de excluir
     } else {
         carregarProdutosNoModalPorCategoria();
         modal.querySelector('h3').textContent = 'Adicionar Item';
         modal.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus-circle"></i> Adicionar Item';
+        deleteBtn.style.display = 'none'; // Esconde o botão de excluir
     }
     modal.classList.add('active');
 }
 
-function closeModal() {
-    document.getElementById('itemModal').classList.remove('active');
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
 }
 
 function carregarCategoriasNoModalItem() {
@@ -1239,4 +1432,3 @@ function carregarProdutosNoModalPorCategoria() {
         select.innerHTML += `<option value="${p.id}" data-valor="${p.valor}">${p.nomeProposta} ${valorDisplay}</option>`;
     });
 }
-

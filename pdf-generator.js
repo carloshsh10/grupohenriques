@@ -132,19 +132,26 @@ function adicionarItensOrcamentoPremium(doc, orcamento, startY) {
         {header: "V. UNIT.", dataKey: "unitario"}, 
         {header: "TOTAL", dataKey: "total"}
     ];
+    
+    // ======================= PONTO DA ALTERAÇÃO =======================
+    // A tabela de itens agora usa a nova função "formatarNumeroSemSimbolo"
+    // para não exibir "R$" nas colunas de valores.
     const tableRows = orcamento.itens.map(item => ({
         produto: item.produtoNome,
         quantidade: item.quantidade.toLocaleString('pt-BR'),
-        unitario: formatarMoeda(item.valor),
-        total: formatarMoeda(item.quantidade * item.valor)
+        unitario: formatarNumeroSemSimbolo(item.valor),
+        total: formatarNumeroSemSimbolo(item.quantidade * item.valor)
     }));
+    
     if (orcamento.maoDeObra > 0) {
         tableRows.push({
             _section: "maoDeObra",
             produto: {content: "MÃO DE OBRA / SERVIÇOS", colSpan: 3, styles: {fontStyle: 'bold', fillColor: [235, 235, 235], textColor: [0,0,0]}},
-            total: {content: formatarMoeda(orcamento.maoDeObra), styles: {fontStyle: 'bold', fillColor: [235, 235, 235], textColor: [0,0,0]}}
+            total: {content: formatarNumeroSemSimbolo(orcamento.maoDeObra), styles: {fontStyle: 'bold', fillColor: [235, 235, 235], textColor: [0,0,0]}}
         });
     }
+    // =================================================================
+
     let fontSizeTabela = 8; 
     if (orcamento.itens.length > 12 && orcamento.itens.length <= 18) {
         fontSizeTabela = 7;
@@ -188,6 +195,8 @@ function adicionarTotaisPremium(doc, orcamento, startY) {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 51, 102);
+    
+    // Totais Finais continuam usando "formatarMoeda" para exibir o "R$"
     doc.text('TOTAL PRODUTOS:', boxX + 4, boxY + 6);
     doc.text(formatarMoeda(totalProdutos), boxX + boxWidth - 4, boxY + 6, {align: 'right'});
     doc.setFontSize(10);
@@ -494,7 +503,26 @@ function adicionarCabecalhoFaturamento(doc, cliente) {
     return y + clienteBoxHeight + 8;
 }
 
+/**
+ * Formata um número para o padrão monetário brasileiro (ex: R$ 1.250,75).
+ * @param {number} valor O número a ser formatado.
+ * @returns {string} O valor formatado com o símbolo "R$".
+ */
 function formatarMoeda(valor) {
     if (typeof valor !== 'number' || isNaN(valor)) return 'R$ 0,00';
     return 'R$ ' + parseFloat(valor).toFixed(2).replace('.', ',');
+}
+
+/**
+ * NOVA FUNÇÃO: Formata um número para o padrão monetário, mas SEM o símbolo "R$".
+ * Usada para as colunas da tabela, para um visual mais limpo.
+ * @param {number} valor O número a ser formatado.
+ * @returns {string} O valor formatado sem o símbolo "R$" (ex: "1.250,75").
+ */
+function formatarNumeroSemSimbolo(valor) {
+    if (typeof valor !== 'number' || isNaN(valor)) {
+        return '0,00';
+    }
+    // Formata o número com duas casas decimais e usa a vírgula como separador decimal.
+    return parseFloat(valor).toFixed(2).replace('.', ',');
 }

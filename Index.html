@@ -9,7 +9,8 @@
     <meta name="theme-color" content="#0f0017">
     <link rel="apple-touch-icon" href="assets/icone.png"> <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="icon" href="assets/icone.png" type="image/png"> <style>
+    <link rel="icon" href="assets/icone.png" type="image/png"> 
+    <style>
         /* Estilo para o status do Firebase no cabeçalho (MODIFICADO) */
         #cloud-status-container {
             text-align: right;
@@ -28,6 +29,106 @@
             gap: 10px;
             align-items: center;
             flex-wrap: wrap; /* Permite que os botões quebrem a linha em telas pequenas */
+        }
+
+        /* Estilos para o Modal de Confirmação de Exclusão (Swipe-to-delete) */
+        #swipe-confirm-modal .modal-content {
+            text-align: center;
+        }
+        #swipe-container {
+            position: relative;
+            width: 90%;
+            height: 50px;
+            background-color: #e0e0e0;
+            border-radius: 25px;
+            margin: 20px auto;
+            overflow: hidden;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+        #swipe-handle {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 60px;
+            height: 100%;
+            background-color: #ff4d4d;
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.5rem;
+            z-index: 2;
+            transition: left 0.3s ease, background-color 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        #swipe-text {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1;
+            color: #333;
+            font-weight: bold;
+        }
+        #swipe-container.confirmed #swipe-handle {
+            background-color: #4caf50;
+        }
+        #swipe-cancel-btn {
+            background-color: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* CORREÇÃO DE LAYOUT: Estilos para o Modal de Edição Responsivo */
+        #editOrcamentoModal .modal-content {
+            display: flex;
+            flex-direction: column;
+            width: 80%;
+            max-width: 900px;
+            height: auto; /* Altura automática baseada no conteúdo */
+            max-height: 90vh; /* Altura máxima de 90% da tela */
+            padding: 0; /* Removido para controle total do layout interno */
+            overflow: hidden; /* Esconde qualquer overflow no container principal */
+        }
+        #editOrcamentoModal .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            flex-shrink: 0; /* Impede que o header encolha */
+        }
+        #editOrcamentoModal .modal-header .close-modal {
+             font-size: 1.8rem;
+        }
+        #editOrcamentoModal .modal-body-scrollable {
+            overflow-y: auto; /* Adiciona rolagem vertical SE necessário */
+            padding: 15px 20px;
+        }
+        #editOrcamentoModal .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #e0e0e0;
+            flex-shrink: 0; /* Impede que o footer encolha */
+        }
+        
+        /* Otimização para telas menores (smartphones) */
+        @media (max-width: 768px) {
+            #editOrcamentoModal .modal-content {
+                width: 95%; /* Ocupa mais espaço na largura */
+                max-height: 95vh;
+            }
+            #editOrcamentoModal .modal-header,
+            #editOrcamentoModal .modal-body-scrollable,
+            #editOrcamentoModal .modal-footer {
+                padding: 12px; /* Reduz o espaçamento interno */
+            }
         }
     </style>
     
@@ -208,7 +309,6 @@
                         </div>
                         <button type="button" id="adicionar-item-btn" class="btn-secondary"><i class="fas fa-plus-circle"></i> Adicionar Item</button>
                         <button type="button" id="gerar-pdf-btn" class="btn-primary"><i class="fas fa-file-pdf"></i> Gerar PDF</button>
-                        <!-- Botão Salvar & Novo Orçamento -->
                         <button type="button" id="salvar-novo-orcamento-btn" class="btn-primary"><i class="fas fa-save"></i> Salvar & Novo Orçamento</button>
                     </form>
 
@@ -348,7 +448,10 @@
                     <label for="modal-valor">Valor UND (R$):</label>
                     <input type="number" id="modal-valor" step="0.01" min="0" required>
                 </div>
-                <button type="submit" class="btn-primary"><i class="fas fa-plus-circle"></i> Adicionar Item</button>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary"><i class="fas fa-plus-circle"></i> Adicionar Item</button>
+                    <button type="button" id="delete-item-btn" class="btn-danger" style="display: none;"><i class="fas fa-trash-alt"></i> Excluir Item</button>
+                </div>
             </form>
         </div>
     </div>
@@ -359,6 +462,80 @@
             <h3 id="produtos-categoria-modal-title">Produtos da Categoria</h3>
             <div id="produtos-categoria-modal-body">
                 </div>
+        </div>
+    </div>
+    
+    <div id="editOrcamentoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="edit-orcamento-modal-title">Editar Orçamento</h3>
+                <span class="close-modal" id="close-edit-orcamento-modal">&times;</span>
+            </div>
+            
+            <div class="modal-body-scrollable">
+                <form id="edit-orcamento-form">
+                    <input type="hidden" id="edit-orcamento-id">
+                    <div class="form-group">
+                        <label for="edit-orcamento-cliente">Cliente:</label>
+                        <select id="edit-orcamento-cliente" required>
+                            </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-orcamento-servicos">Descrição dos Serviços:</label>
+                        <input type="text" id="edit-orcamento-servicos">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-orcamento-mao-de-obra">Valor Mão de Obra (R$):</label>
+                        <input type="number" id="edit-orcamento-mao-de-obra" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-orcamento-relatorio">Relatório/Observações:</label>
+                        <textarea id="edit-orcamento-relatorio" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-orcamento-formas-pagamento">Formas de Pagamento:</label>
+                        <textarea id="edit-orcamento-formas-pagamento" rows="2"></textarea>
+                    </div>
+                </form>
+                <h4 class="mt-20">Itens do Orçamento</h4>
+                <div class="table-container">
+                    <table id="edit-orcamento-itens-tabela">
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Qtd</th>
+                                <th>Valor UND</th>
+                                <th>Total</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="orcamento-details mt-20">
+                    <p><strong>Total de Produtos:</strong> <span id="edit-total-produtos">R$ 0,00</span></p>
+                    <p><strong>Total Geral:</strong> <span id="edit-total-geral">R$ 0,00</span></p>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div class="form-actions">
+                    <button type="button" id="save-orcamento-changes-btn" class="btn-primary"><i class="fas fa-save"></i> Salvar Alterações</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="swipe-confirm-modal" class="modal">
+        <div class="modal-content">
+            <h3>Confirmar Exclusão</h3>
+            <p>Esta ação não pode ser desfeita. Para confirmar, arraste o controle para a direita.</p>
+            <div id="swipe-container">
+                <div id="swipe-handle"><i class="fas fa-chevron-right"></i><i class="fas fa-chevron-right"></i></div>
+                <div id="swipe-text">Arraste para Excluir</div>
+            </div>
+            <button type="button" id="swipe-cancel-btn" class="btn-secondary mt-20">Cancelar</button>
         </div>
     </div>
 
@@ -447,4 +624,3 @@
     </script>
     </body>
 </html>
-
