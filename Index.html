@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GRUPO HENRIQUES - Sistema de Orçamentos</title>
+    <title>GRUPO HENRI SISTEMAS - Sistema de Orçamentos</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f0017">
@@ -173,7 +173,7 @@
             <div class="inner"></div>
             <div class="icon"><i class="fas fa-lock"></i></div>
             <div class="text" data-text="LOADING"></div>
-            <div class="company-name">GRUPO HENRIQUES</div>
+            <div class="company-name">GRUPO HENRI SISTEMAS</div>
             <div class="tagline">Protegendo o que é seu</div>
             <div class="loading-bar-container">
                 <div class="loading-bar"></div>
@@ -183,9 +183,9 @@
     <div class="app-wrapper">
         <header>
             <div class="logo-container">
-                <img src="assets/logo.png" alt="GRUPO HENRIQUES Logo" id="company-logo">
+                <img src="assets/logo.png" alt="GRUPO HENRI SISTEMAS Logo" id="company-logo">
                 <div class="company-info">
-                    <h1>GRUPO HENRIQUES</h1>
+                    <h1>GRUPO HENRI SISTEMAS</h1>
                     <p>SEGURANÇA ELETRÔNICA</p>
                     <p>Contato: 24 99223-2018 / 24 99296-9844</p>
                     <p>CNPJ: 22.827.727/0001-80</p>
@@ -418,7 +418,7 @@
         </div>
 
         <footer>
-            <p>&copy; <span id="current-year">2024</span> GRUPO HENRIQUES - Segurança Eletrônica. Todos os direitos reservados.</p>
+            <p>&copy; <span id="current-year">2024</span> GRUPO HENRI SISTEMAS - Segurança Eletrônica. Todos os direitos reservados.</p>
         </footer>
     </div>
 
@@ -497,7 +497,12 @@
                         <textarea id="edit-orcamento-formas-pagamento" rows="2"></textarea>
                     </div>
                 </form>
-                <h4 class="mt-20">Itens do Orçamento</h4>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                    <h4>Itens do Orçamento</h4>
+                    <button type="button" id="add-item-to-edited-orcamento-btn" class="btn-secondary btn-sm"><i class="fas fa-plus-circle"></i> Adicionar Item</button>
+                </div>
+
                 <div class="table-container">
                     <table id="edit-orcamento-itens-tabela">
                         <thead>

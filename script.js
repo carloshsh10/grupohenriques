@@ -123,6 +123,8 @@ function configurarEventListeners() {
     // CORREÇÃO 2: Event Listeners para o novo modal de edição de orçamento
     document.getElementById('close-edit-orcamento-modal').addEventListener('click', () => closeModal('editOrcamentoModal'));
     document.getElementById('save-orcamento-changes-btn').addEventListener('click', salvarAlteracoesOrcamentoPeloModal);
+    // **NOVO EVENT LISTENER ADICIONADO AQUI**
+    document.getElementById('add-item-to-edited-orcamento-btn').addEventListener('click', () => openItemModal(-1, 'edit'));
     
     // CORREÇÃO 3: Event Listeners para o modal de confirmação de exclusão (swipe)
     configurarSwipeParaExcluir();
@@ -581,6 +583,8 @@ function abrirModalProdutosDaCategoria(categoriaNome, produtosDaCategoria) {
     table.innerHTML = `<thead><tr><th>ID</th><th>Nome Proposta</th><th>Nome Real</th><th>Valor</th><th>Ações</th></tr></thead><tbody></tbody>`;
     const tbody = table.querySelector('tbody');
     produtosDaCategoria.forEach((p, index) => {
+        // **** AQUI ESTÁ A CORREÇÃO ****
+        // A ordem das funções no onclick foi invertida para garantir que o modal feche primeiro.
         tbody.innerHTML += `
             <tr>
                 <td>${(index + 1).toString().padStart(3, '0')}</td>
@@ -588,7 +592,7 @@ function abrirModalProdutosDaCategoria(categoriaNome, produtosDaCategoria) {
                 <td>${p.nomeReal || 'N/A'}</td>
                 <td>${formatarMoeda(p.valor)}</td>
                 <td>
-                    <button class="btn-editar btn-sm" onclick="event.stopPropagation(); editarProduto('${p.id}'); closeProdutosCategoriaModal();"><i class="fas fa-edit"></i></button>
+                    <button class="btn-editar btn-sm" onclick="event.stopPropagation(); closeProdutosCategoriaModal(); editarProduto('${p.id}');"><i class="fas fa-edit"></i></button>
                     <button class="btn-excluir btn-sm" onclick="event.stopPropagation(); excluirProduto('${p.id}', '${categoriaNome}');"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>

@@ -24,10 +24,10 @@ function gerarPDF(isPreview = false, orcamentoData = null) {
 
         doc.setProperties({
             title: `Proposta Comercial ${cliente.nome} - Nº ${proposalId}`,
-            subject: 'Proposta Comercial GRUPO HENRIQUES',
-            author: 'GRUPO HENRIQUES',
-            keywords: `orcamento, segurança eletrônica, GRUPO HENRIQUES, ${proposalId}`,
-            creator: 'Sistema de Orçamentos GRUPO HENRIQUES'
+            subject: 'Proposta Comercial GRUPO HENRI SISTEMAS',
+            author: 'GRUPO HENRI SISTEMAS',
+            keywords: `orcamento, segurança eletrônica, GRUPO HENRI SISTEMAS, ${proposalId}`,
+            creator: 'Sistema de Orçamentos GRUPO HENRI SISTEMAS'
         });
 
         // Geração das páginas
@@ -69,7 +69,7 @@ function adicionarCabecalhoPremium(doc, cliente, orcamento) {
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
-    doc.text('GRUPO HENRIQUES', pageWidth / 2, y + 7, { align: 'center' });
+    doc.text('GRUPO HENRI SISTEMAS', pageWidth / 2, y + 7, { align: 'center' });
     doc.setFontSize(9);
     doc.setTextColor(255, 153, 0);
     doc.text('SEGURANÇA ELETRÔNICA', pageWidth / 2, y + 14, { align: 'center' });
@@ -281,8 +281,8 @@ function adicionarTermosCondicoes(doc) {
         { text: "Prezados,", style: "normal"},
         { text: "SOBRE O ORÇAMENTO", style: "bold", spaceBefore: 4, spaceAfter: 2.5},
         { text: "Prazo de Garantia:", style: "bold"},
-        { text: "O Grupo Henriques oferece garantia de até 3 (três) meses para a execução de todos os serviços prestados, contados a partir da data de conclusão. A garantia dos equipamentos segue os prazos e condições estabelecidos pelos respectivos fabricantes. Os serviços de garantia serão realizados exclusivamente nas dependências localizadas em Angra dos Reis – RJ.", style: "normal", spaceAfter: 2.5},
-        { text: "Ressaltamos que o Grupo Henriques não se responsabiliza por danos oriundos de acidentes, negligência, uso inadequado dos equipamentos, bem como danos decorrentes de eventos fortuitos, força maior ou fenômenos naturais, tais como descargas elétricas, raios, vendavais, inundações e desabamentos.", style: "normal", spaceAfter: 4},
+        { text: "O Grupo Henri Sistemas oferece garantia de até 3 (três) meses para a execução de todos os serviços prestados, contados a partir da data de conclusão. A garantia dos equipamentos segue os prazos e condições estabelecidos pelos respectivos fabricantes. Os serviços de garantia serão realizados exclusivamente nas dependências localizadas em Angra dos Reis – RJ.", style: "normal", spaceAfter: 2.5},
+        { text: "Ressaltamos que o Grupo Henri Sistemas não se responsabiliza por danos oriundos de acidentes, negligência, uso inadequado dos equipamentos, bem como danos decorrentes de eventos fortuitos, força maior ou fenômenos naturais, tais como descargas elétricas, raios, vendavais, inundações e desabamentos.", style: "normal", spaceAfter: 4},
         { text: "Duração dos Trabalhos:", style: "bold"},
         { text: "O prazo para execução será definido em comum acordo com o cliente. Este cronograma pode ser impactado por fatores externos, como: problemas estruturais, dutos obstruídos, postes com estrutura inadequada, dificuldade de acesso aos pontos de distribuição, autorização da Prefeitura Municipal e de órgãos públicos ou privados necessários à execução dos serviços.", style: "normal", spaceAfter: 4},
         { text: "Observações importantes para execução do serviço:", style: "bold"},
@@ -335,7 +335,7 @@ function adicionarApresentacao(doc) {
     const apresentacao = [
         "Prezado(a) Cliente,",
         "Apresentamos a seguir nossa proposta orçamentária referente aos serviços de Segurança Eletrônica, elaborada conforme as especificações e necessidades apresentadas.",
-        "O Grupo Henriques atua há mais de 10 anos no segmento de Segurança Eletrônica e Digital na cidade de Angra dos Reis – RJ, consolidando-se como referência pela qualidade dos serviços prestados e pela busca contínua da satisfação total de nossos clientes.",
+        "O Grupo Henri Sistemas atua há mais de 10 anos no segmento de Segurança Eletrônica e Digital na cidade de Angra dos Reis – RJ, consolidando-se como referência pela qualidade dos serviços prestados e pela busca contínua da satisfação total de nossos clientes.",
         "Contamos com uma equipe de profissionais altamente capacitados e constantemente treinados. Este diferencial garante que todos os serviços sejam executados em conformidade com os mais altos padrões técnicos, utilizando sempre materiais de primeira linha e tecnologia de ponta.",
         "A execução dos projetos é realizada por técnicos especializados, responsáveis por assegurar que todas as atividades sigam rigorosamente o escopo acordado. Mantemos nossos clientes constantemente informados sobre o progresso dos serviços, promovendo uma parceria transparente e eficaz.",
         "Permanecemos à inteira disposição para quaisquer dúvidas, esclarecimentos ou ajustes que se façam necessários nesta proposta.",
@@ -364,7 +364,7 @@ function adicionarApresentacao(doc) {
     y += lineHeight * 1.5;
     const assinatura = [
         "Carlos Henrique dos Santos",
-        "Diretor Técnico – Grupo Henriques",
+        "Diretor Técnico – Grupo Henri Sistemas",
         "Telefones: (24) 99223-2018 / (24) 99296-9844"
     ];
     assinatura.forEach(linha => {
@@ -479,7 +479,7 @@ function adicionarCabecalhoFaturamento(doc, cliente) {
     doc.setFillColor(0, 51, 102);
     doc.rect(0, 0, pageWidth, 35, 'F');
     doc.setFontSize(16); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
-    doc.text('GRUPO HENRIQUES', pageWidth / 2, y + 7, { align: 'center' });
+    doc.text('GRUPO HENRI SISTEMAS', pageWidth / 2, y + 7, { align: 'center' });
     doc.setFontSize(9); doc.setTextColor(255, 153, 0);
     doc.text('SEGURANÇA ELETRÔNICA', pageWidth / 2, y + 14, { align: 'center' });
     doc.setFontSize(7.5); doc.setTextColor(255, 255, 255);
