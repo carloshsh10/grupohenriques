@@ -523,18 +523,10 @@ table tbody tr:hover {
 /* ================================================= */
 /* SOLUÇÃO DEFINITIVA PARA SOBREPOSIÇÃO DE MODAIS    */
 /* ================================================= */
-/* O z-index base de 1000 já é definido na classe .modal. */
-/* O modal #editOrcamentoModal usará essa base. */
-
-/* Define uma camada SUPERIOR para o modal de item, garantindo que ele sempre apareça na frente */
-#itemModal {
-    z-index: 1010;
-}
-
-/* Garante que o modal de confirmação de exclusão fique sobre TODOS os outros */
-#swipe-confirm-modal {
-    z-index: 1020;
-}
+#itemModal { z-index: 1010; }
+#upcoming-boletos-modal { z-index: 1010; }
+#day-details-modal { z-index: 1010; }
+#swipe-confirm-modal { z-index: 1020; }
 /* ================================================= */
 
 
@@ -613,13 +605,13 @@ footer {
     width: 100px; /* Ajustado para acomodar botões */
 }
 
-/* Estilos para as listas genéricas (Orçamentos, Faturamentos, NFE) */
-#lista-orcamentos, #lista-faturamentos-gerados, #lista-nfe-anexadas {
+/* Estilos para as listas genéricas (Orçamentos, Faturamentos) */
+#lista-orcamentos, #lista-faturamentos-gerados {
     list-style: none;
     padding: 0;
 }
 
-#lista-orcamentos li, #lista-faturamentos-gerados .list-item, #lista-nfe-anexadas .list-item {
+#lista-orcamentos li, #lista-faturamentos-gerados .list-item {
     background-color: var(--cor-fundo-secundario);
     border: 1px solid var(--cor-borda);
     border-radius: var(--border-radius-padrao);
@@ -631,98 +623,27 @@ footer {
     transition: var(--transition-rapida);
 }
 
-#lista-orcamentos li:hover, #lista-faturamentos-gerados .list-item:hover, #lista-nfe-anexadas .list-item:hover {
+#lista-orcamentos li:hover, #lista-faturamentos-gerados .list-item:hover {
     background-color: rgba(0, 188, 212, 0.05);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     transform: translateY(-2px);
 }
 
-#lista-orcamentos li span, #lista-faturamentos-gerados .list-item span, #lista-nfe-anexadas .list-item span {
+#lista-orcamentos li span, #lista-faturamentos-gerados .list-item span {
     font-weight: 500;
     color: var(--cor-destaque-primaria);
     flex-grow: 1; /* Para o texto ocupar espaço e empurrar os botões */
 }
 
-#lista-orcamentos li div, #lista-faturamentos-gerados .list-item div, #lista-nfe-anexadas .list-item div { /* Container dos botões */
+#lista-orcamentos li div, #lista-faturamentos-gerados .list-item div { /* Container dos botões */
     display: flex;
     gap: 5px; /* Reduzido gap */
     flex-shrink: 0; /* Para não encolher os botões */
     align-items: center;
 }
-#lista-orcamentos li div button, #lista-faturamentos-gerados .list-item div button, #lista-nfe-anexadas .list-item div button {
+#lista-orcamentos li div button, #lista-faturamentos-gerados .list-item div button {
     margin-right: 0; /* Remover margem direita individual dos botões dentro desta div */
 }
-
-
-/* === NOVOS ESTILOS PARA ABA NOTA FORNECEDOR === */
-#nfe-management-panel {
-    margin-top: 25px;
-    background-color: var(--cor-fundo-secundario);
-    border: 1px solid var(--cor-borda);
-    border-radius: var(--border-radius-padrao);
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.nfe-placeholder {
-    color: var(--cor-texto-secundario);
-    text-align: center;
-    padding: 40px;
-    font-style: italic;
-    border: 2px dashed var(--cor-borda);
-    border-radius: var(--border-radius-padrao);
-}
-
-.nfe-input-group {
-    background-color: var(--cor-card-fundo);
-    padding: 15px;
-    border-radius: var(--border-radius-padrao);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.nfe-input-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 500;
-    font-size: 14px;
-    color: var(--cor-destaque-primaria);
-}
-
-.nfe-input-group input[type="text"] {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid var(--cor-borda);
-    border-radius: var(--border-radius-padrao);
-    background-color: var(--cor-fundo-secundario);
-    color: var(--cor-texto-principal);
-    font-size: 15px;
-    transition: var(--transition-rapida);
-    outline: none;
-    margin-bottom: 10px; /* Espaço entre os inputs */
-}
-
-.nfe-input-group input[type="text"]:focus {
-    border-color: var(--cor-destaque-primaria);
-    box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.2);
-}
-
-.nfe-actions {
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end; /* Alinha botões à direita */
-    flex-wrap: wrap; /* Permite quebrar linha em telas pequenas */
-    margin-top: 10px;
-}
-
-.nfe-actions button {
-    padding: 8px 12px;
-    font-size: 13px;
-    margin: 0;
-}
-/* === FIM DOS NOVOS ESTILOS === */
-
 
 /* Estilos para Categorias de Produtos */
 #categorias-container {
@@ -875,13 +796,13 @@ footer {
         padding: 15px; /* Adjust footer padding */
     }
 
-    #lista-orcamentos li, #lista-faturamentos-gerados .list-item, #lista-nfe-anexadas .list-item {
+    #lista-orcamentos li, #lista-faturamentos-gerados .list-item {
         flex-direction: column; /* Empilha texto e botões em telas menores */
         align-items: flex-start;
         gap: 10px;
         padding: 12px 15px; /* Adjust list item padding */
     }
-    #lista-orcamentos li div, #lista-faturamentos-gerados .list-item div, #lista-nfe-anexadas .list-item div {
+    #lista-orcamentos li div, #lista-faturamentos-gerados .list-item div {
         width: 100%;
         justify-content: flex-start; /* Alinha botões à esquerda */
     }
@@ -975,12 +896,10 @@ footer {
         align-items: stretch;
         gap: 10px; /* Reduce gap for stacked elements */
     }
-    .parcela-row .form-group label,
-    .nfe-input-group label {
+    .parcela-row .form-group label {
         font-size: 13px; /* Smaller labels */
     }
-    .parcela-row input,
-    .nfe-input-group input {
+    .parcela-row input {
         padding: 8px; /* Smaller inputs */
         font-size: 14px;
     }
@@ -1178,5 +1097,189 @@ footer {
         width: 300px; /* Largura fixa para a barra de carregamento em desktops */
     }
 }
-
 /* ========= FIM DOS ESTILOS DA SPLASH SCREEN ========= */
+
+/* ========= NOVOS ESTILOS PARA ABA BOLETOS ========= */
+
+#header-status-area {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#alert-icon-container {
+    display: none; /* Começa escondido */
+    color: #ff4d4d;
+    font-size: 1.8rem;
+    cursor: pointer;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); text-shadow: 0 0 5px rgba(255, 77, 77, 0.5); }
+    50% { transform: scale(1.2); text-shadow: 0 0 20px rgba(255, 77, 77, 1); }
+    100% { transform: scale(1); text-shadow: 0 0 5px rgba(255, 77, 77, 0.5); }
+}
+
+/* Calendário */
+#calendar-container {
+    background-color: var(--cor-fundo-secundario);
+    padding: 20px;
+    border-radius: var(--border-radius-padrao);
+    margin-bottom: 30px;
+}
+
+#calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+#calendar-header button {
+    background: none;
+    border: none;
+    color: var(--cor-destaque-primaria);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 5px 10px;
+}
+
+#month-year-display {
+    color: var(--cor-texto-principal);
+    font-size: 1.5rem;
+}
+
+#calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    margin-bottom: 10px;
+    color: var(--cor-texto-secundario);
+    font-weight: bold;
+}
+
+#calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+}
+
+.calendar-day {
+    position: relative;
+    padding: 10px;
+    text-align: center;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: var(--transition-rapida);
+}
+
+.calendar-day:hover {
+    background-color: rgba(0, 188, 212, 0.1);
+}
+
+.calendar-day.not-current-month {
+    color: var(--cor-texto-secundario);
+    opacity: 0.5;
+}
+
+.calendar-day.today {
+    background-color: var(--cor-destaque-secundaria);
+    color: white;
+}
+
+.event-dots {
+    position: absolute;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+}
+
+.event-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    box-shadow: 0 0 5px #000;
+}
+.event-dot.red { background-color: #e74c3c; }
+.event-dot.yellow { background-color: #f1c40f; }
+.event-dot.paid { background-color: #2ecc71; text-decoration: line-through; }
+
+
+/* Formulários de Boletos */
+.boletos-forms-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.boleto-form-wrapper {
+    background-color: var(--cor-fundo-secundario);
+    padding: 20px;
+    border-radius: var(--border-radius-padrao);
+}
+
+@media (max-width: 992px) {
+    .boletos-forms-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Modal de Alertas */
+#upcoming-boletos-summary {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--cor-borda);
+}
+.summary-counts {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 10px;
+}
+.count-circle-red, .count-circle-yellow {
+    display: inline-block;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    line-height: 25px;
+    text-align: center;
+    color: white;
+    font-weight: bold;
+    margin-right: 5px;
+}
+.count-circle-red { background-color: #e74c3c; }
+.count-circle-yellow { background-color: #f1c40f; }
+
+#upcoming-boletos-list .boleto-item,
+#day-details-list .boleto-item {
+    background-color: var(--cor-fundo-secundario);
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: var(--border-radius-padrao);
+    border-left: 5px solid;
+}
+#upcoming-boletos-list .boleto-item.fornecedor,
+#day-details-list .boleto-item.fornecedor { border-color: #e74c3c; }
+#upcoming-boletos-list .boleto-item.cliente,
+#day-details-list .boleto-item.cliente { border-color: #f1c40f; }
+#day-details-list .boleto-item.paid { border-color: #2ecc71; opacity: 0.7; }
+
+.boleto-item p { margin: 0 0 5px; }
+.boleto-item .boleto-header { font-weight: bold; color: var(--cor-texto-principal); }
+.boleto-item .boleto-value { font-size: 1.1rem; color: var(--cor-destaque-primaria); }
+
+.boleto-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}

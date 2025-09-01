@@ -2,6 +2,7 @@
 let clientes = [];
 let produtos = [];
 let orcamentos = [];
+let boletos = []; // NOVA VARIÁVEL GLOBAL
 let proximoOrcamentoId = 1;
 
 let currentOrcamento = {
@@ -12,11 +13,14 @@ let currentOrcamento = {
     relatorio: "",
     formasPagamento: "",
     servicos: "",
-    faturamentoData: null,
-    nfeChaves: []
+    faturamentoData: null
 };
 let isEditingItem = false;
 let editingItemIndex = -1;
+
+// Variáveis para o calendário de boletos
+let currentCalendarDate = new Date();
+
 
 // Firebase variables
 let firebaseUser = null;
@@ -70,10 +74,7 @@ function configurarEventListeners() {
     document.getElementById('item-form').addEventListener('submit', adicionarOuEditarItemOrcamento);
     document.querySelector('#itemModal .close-modal').addEventListener('click', () => closeModal('itemModal'));
     document.getElementById('modal-item-categoria').addEventListener('change', carregarProdutosNoModalPorCategoria);
-    
-    // CORREÇÃO 1: Adicionar event listener para o novo botão de excluir no modal de item
     document.getElementById('delete-item-btn').addEventListener('click', excluirItemPeloModal);
-
 
     const selectModalProduto = document.getElementById('modal-produto');
     selectModalProduto.addEventListener('change', function() {
@@ -94,40 +95,33 @@ function configurarEventListeners() {
     document.getElementById('salvar-novo-faturamento-btn').addEventListener('click', salvarE䡊ovoFaturamento);
     document.getElementById('faturamento-orcamento-vinculado').addEventListener('change', preencherClienteFaturamento);
 
-    // Nota Fornecedor - Event Listeners atualizados
-    document.getElementById('nfe-orcamento-vinculado').addEventListener('change', carregarChavesNFEParaOrcamentoSelecionado);
-
-    document.getElementById('nfe-management-panel').addEventListener('click', (event) => {
-        const targetButton = event.target.closest('button');
-        if (!targetButton) return;
-
-        if (targetButton.classList.contains('btn-salvar-nfe')) {
-            const index = targetButton.dataset.index;
-            salvarChaveNFE(index);
-        } else if (targetButton.classList.contains('btn-editar-nfe')) {
-            const index = targetButton.dataset.index;
-            editarChaveNFE(index);
-        } else if (targetButton.classList.contains('btn-gerar-nfe')) {
-            const index = targetButton.dataset.index;
-            gerarNFEFromChave(index);
-        } else if (targetButton.classList.contains('btn-excluir-nfe')) {
-            const index = targetButton.dataset.index;
-            excluirChaveNFE(index);
-        }
-    });
-
     // Firebase Login/Logout
     document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
     document.getElementById('google-logout-btn').addEventListener('click', signOutGoogle);
 
-    // CORREÇÃO 2: Event Listeners para o novo modal de edição de orçamento
+    // Modal de edição de orçamento
     document.getElementById('close-edit-orcamento-modal').addEventListener('click', () => closeModal('editOrcamentoModal'));
     document.getElementById('save-orcamento-changes-btn').addEventListener('click', salvarAlteracoesOrcamentoPeloModal);
-    // **NOVO EVENT LISTENER ADICIONADO AQUI**
     document.getElementById('add-item-to-edited-orcamento-btn').addEventListener('click', () => openItemModal(-1, 'edit'));
     
-    // CORREÇÃO 3: Event Listeners para o modal de confirmação de exclusão (swipe)
+    // Modal de confirmação de exclusão (swipe)
     configurarSwipeParaExcluir();
+
+    // ========= NOVOS EVENT LISTENERS PARA BOLETOS =========
+    document.getElementById('prev-month-btn').addEventListener('click', () => changeMonth(-1));
+    document.getElementById('next-month-btn').addEventListener('click', () => changeMonth(1));
+    document.getElementById('boleto-cliente-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        salvarBoleto('cliente');
+    });
+    document.getElementById('boleto-fornecedor-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        salvarBoleto('fornecedor');
+    });
+    document.getElementById('alert-icon-container').addEventListener('click', openUpcomingBoletosModal);
+    document.querySelector('#upcoming-boletos-modal .close-modal').addEventListener('click', () => closeModal('upcoming-boletos-modal'));
+    document.querySelector('#day-details-modal .close-modal').addEventListener('click', () => closeModal('day-details-modal'));
+
 }
 
 
@@ -190,6 +184,7 @@ async function saveDataToFirestore() {
         salvarNoLocalStorage('clientes', clientes);
         salvarNoLocalStorage('produtos', produtos);
         salvarNoLocalStorage('orcamentos', orcamentos);
+        salvarNoLocalStorage('boletos', boletos); // SALVAR BOLETOS
         salvarNoLocalStorage('proximoOrcamentoId', proximoOrcamentoId);
         salvarNoLocalStorage('currentOrcamento', currentOrcamento);
         return;
@@ -202,6 +197,7 @@ async function saveDataToFirestore() {
             clientes: clientes,
             produtos: produtos,
             orcamentos: orcamentos,
+            boletos: boletos, // SALVAR BOLETOS
             proximoOrcamentoId: proximoOrcamentoId,
             currentOrcamento: currentOrcamento
         });
@@ -230,6 +226,7 @@ async function loadDataFromFirestore() {
             clientes = data.clientes || [];
             produtos = data.produtos || [];
             orcamentos = data.orcamentos || [];
+            boletos = data.boletos || []; // CARREGAR BOLETOS
             proximoOrcamentoId = data.proximoOrcamentoId || 1;
             currentOrcamento = data.currentOrcamento || {
                 id: generateSequentialId(true),
@@ -239,41 +236,16 @@ async function loadDataFromFirestore() {
                 relatorio: "",
                 formasPagamento: "",
                 servicos: "",
-                faturamentoData: null,
-                nfeChaves: []
+                faturamentoData: null
             };
-
-            if (!Array.isArray(currentOrcamento.nfeChaves)) {
-                currentOrcamento.nfeChaves = [];
-            } else {
-                currentOrcamento.nfeChaves = currentOrcamento.nfeChaves.map(entry => {
-                    if (typeof entry === 'string') {
-                        return { chave: entry, fornecedor: '' };
-                    }
-                    return entry;
-                }).filter(entry => entry !== null && entry !== undefined);
-            }
-
-            orcamentos = orcamentos.map(orc => {
-                if (!Array.isArray(orc.nfeChaves)) {
-                    orc.nfeChaves = [];
-                } else {
-                    orc.nfeChaves = orc.nfeChaves.map(entry => {
-                        if (typeof entry === 'string') {
-                            return { chave: entry, fornecedor: '' };
-                        }
-                        return entry;
-                    }).filter(entry => entry !== null && entry !== undefined);
-                }
-                return orc;
-            });
-
             updateFirebaseStatus('Conectado', 'green');
         } else {
             updateFirebaseStatus('Nenhum dado na nuvem', 'blue');
+            // Resetar todos os dados se não houver nada na nuvem
             clientes = [];
             produtos = [];
             orcamentos = [];
+            boletos = [];
             proximoOrcamentoId = 1;
             currentOrcamento = {
                 id: generateSequentialId(true),
@@ -282,8 +254,7 @@ async function loadDataFromFirestore() {
                 maoDeObra: 0,
                 relatorio: "",
                 formasPagamento: "",
-                servicos: "",
-                nfeChaves: []
+                servicos: ""
             };
         }
         carregarDadosIniciais(); 
@@ -294,6 +265,7 @@ async function loadDataFromFirestore() {
         loadDataFromLocalStorage(); // Fallback
     }
 }
+
 
 function updateFirebaseStatus(message, color) {
     if(firebaseStatusElement) {
@@ -314,6 +286,7 @@ function loadDataFromLocalStorage() {
     clientes = JSON.parse(localStorage.getItem('clientes')) || [];
     produtos = JSON.parse(localStorage.getItem('produtos')) || [];
     orcamentos = JSON.parse(localStorage.getItem('orcamentos')) || [];
+    boletos = JSON.parse(localStorage.getItem('boletos')) || []; // CARREGAR BOLETOS
     proximoOrcamentoId = parseInt(localStorage.getItem('proximoOrcamentoId')) || 1;
     currentOrcamento = JSON.parse(localStorage.getItem('currentOrcamento')) || {
         id: generateSequentialId(true),
@@ -323,35 +296,9 @@ function loadDataFromLocalStorage() {
         relatorio: "",
         formasPagamento: "",
         servicos: "",
-        faturamentoData: null,
-        nfeChaves: []
+        faturamentoData: null
     };
-
-    if (!Array.isArray(currentOrcamento.nfeChaves)) {
-        currentOrcamento.nfeChaves = [];
-    } else {
-        currentOrcamento.nfeChaves = currentOrcamento.nfeChaves.map(entry => {
-            if (typeof entry === 'string') {
-                return { chave: entry, fornecedor: '' };
-            }
-            return entry;
-        }).filter(entry => entry !== null && entry !== undefined);
-    }
-
-    orcamentos = orcamentos.map(orc => {
-        if (!Array.isArray(orc.nfeChaves)) {
-            orc.nfeChaves = [];
-        } else {
-            orc.nfeChaves = orc.nfeChaves.map(entry => {
-                if (typeof entry === 'string') {
-                    return { chave: entry, fornecedor: '' };
-                }
-                return entry;
-            }).filter(entry => entry !== null && entry !== undefined);
-        }
-        return orc;
-    });
-
+    
     carregarDadosIniciais();
 }
 
@@ -362,6 +309,7 @@ function saveData() {
         salvarNoLocalStorage('clientes', clientes);
         salvarNoLocalStorage('produtos', produtos);
         salvarNoLocalStorage('orcamentos', orcamentos);
+        salvarNoLocalStorage('boletos', boletos); // SALVAR BOLETOS
         salvarNoLocalStorage('proximoOrcamentoId', proximoOrcamentoId);
         salvarNoLocalStorage('currentOrcamento', currentOrcamento);
         updateFirebaseStatus('Salvo Localmente. Conecte-se para salvar na nuvem.', 'blue');
@@ -374,6 +322,8 @@ function carregarDadosIniciais() {
     carregarOrcamentoAtual();
     renderizarOrcamentosSalvos();
     renderizarFaturamentosGerados();
+    renderCalendar(); // RENDERIZAR CALENDÁRIO
+    checkForUpcomingBoletos(); // CHECAR ALERTAS
 }
 
 function showSection(sectionId) {
@@ -384,11 +334,8 @@ function showSection(sectionId) {
 
     if (sectionId === 'orcamentos') carregarClientesNoSelect('orcamento-cliente');
     if (sectionId === 'faturamento') carregarOrcamentosNoSelect('faturamento-orcamento-vinculado');
-    if (sectionId === 'nota-fornecedor') {
-        carregarOrcamentosNoSelect('nfe-orcamento-vinculado');
-        carregarChavesNFEParaOrcamentoSelecionado(); 
-    }
     if (sectionId === 'produtos') renderizarProdutosPorCategoria();
+    if (sectionId === 'boletos') renderCalendar();
 }
 
 // Funções Auxiliares
@@ -583,8 +530,6 @@ function abrirModalProdutosDaCategoria(categoriaNome, produtosDaCategoria) {
     table.innerHTML = `<thead><tr><th>ID</th><th>Nome Proposta</th><th>Nome Real</th><th>Valor</th><th>Ações</th></tr></thead><tbody></tbody>`;
     const tbody = table.querySelector('tbody');
     produtosDaCategoria.forEach((p, index) => {
-        // **** AQUI ESTÁ A CORREÇÃO ****
-        // A ordem das funções no onclick foi invertida para garantir que o modal feche primeiro.
         tbody.innerHTML += `
             <tr>
                 <td>${(index + 1).toString().padStart(3, '0')}</td>
@@ -682,9 +627,8 @@ function adicionarOuEditarItemOrcamento(event) {
 
     const newItem = { produtoId, produtoNome: produto.nomeProposta, quantidade, valor };
     
-    // CORREÇÃO 1: Identificar se a edição é no orçamento atual ou no modal de edição
     const modal = document.getElementById('itemModal');
-    const source = modal.dataset.source; // 'current' or 'edit'
+    const source = modal.dataset.source;
 
     if (source === 'current') {
         if (isEditingItem && editingItemIndex > -1) {
@@ -711,10 +655,9 @@ function adicionarOuEditarItemOrcamento(event) {
     closeModal('itemModal');
 }
 
-// CORREÇÃO 1: Função para excluir item, chamada pelo botão no modal de edição
 function excluirItemPeloModal() {
     const modal = document.getElementById('itemModal');
-    const source = modal.dataset.source; // 'current' ou 'edit'
+    const source = modal.dataset.source;
     const itemIndex = editingItemIndex;
 
     if (itemIndex > -1 && confirm('Tem certeza que deseja remover este item do orçamento?')) {
@@ -741,7 +684,6 @@ function renderizarItensOrcamento() {
     tbody.innerHTML = '';
     if (!currentOrcamento.itens) currentOrcamento.itens = [];
     currentOrcamento.itens.forEach((item, index) => {
-        // CORREÇÃO 1: Removido o botão de excluir da linha da tabela. Ação agora é centralizada no botão editar.
         tbody.innerHTML += `
             <tr>
                 <td>${item.produtoNome}</td>
@@ -801,7 +743,7 @@ function salvarOrcamentoAtual() {
 function novoOrcamento() {
     currentOrcamento = {
         id: generateSequentialId(),
-        clienteId: null, itens: [], maoDeObra: 0, relatorio: "", formasPagamento: "", servicos: "", faturamentoData: null, nfeChaves: []
+        clienteId: null, itens: [], maoDeObra: 0, relatorio: "", formasPagamento: "", servicos: "", faturamentoData: null
     };
     saveData();
     carregarOrcamentoAtual();
@@ -823,7 +765,6 @@ function renderizarOrcamentosSalvos() {
     orcamentos.sort((a, b) => new Date(b.data) - new Date(a.data)).forEach(orc => {
         const cliente = clientes.find(c => c.id === orc.clienteId);
         const dataFmt = new Date(orc.data || Date.now()).toLocaleDateString('pt-BR');
-        const hasNFE = orc.nfeChaves && orc.nfeChaves.filter(n => n).length > 0;
         ul.innerHTML += `
             <li>
                 <span>${cliente ? cliente.nome : 'Cliente Desconhecido'} - ${dataFmt} (Nº: ${orc.id})</span>
@@ -832,14 +773,12 @@ function renderizarOrcamentosSalvos() {
                     <button class="btn-excluir" onclick="iniciarExclusaoOrcamento('${orc.id}')" title="Excluir"><i class="fas fa-trash-alt"></i></button>
                     <button class="btn-preview" onclick="previewOrcamento('${orc.id}')" title="Preview Proposta"><i class="fas fa-file-pdf"></i></button>
                     <button class="btn-faturamento ${orc.faturamentoData ? 'active' : ''}" onclick="visualizarFaturamento('${orc.id}')" title="Ver Faturamento"><i class="fas fa-file-invoice"></i></button>
-                    <button class="btn-nfe ${hasNFE ? 'active' : ''}" onclick="visualizarNFE('${orc.id}')" title="Ver NFE"><i class="fas fa-receipt"></i></button>
                 </div>
             </li>
         `;
     });
 }
 
-// CORREÇÃO 2: Função que ABRE O MODAL de edição, substituindo a antiga `carregarOrcamentoSalvo`
 function abrirModalEdicaoOrcamento(id) {
     const orc = orcamentos.find(o => o.id === id);
     if (!orc) {
@@ -847,11 +786,9 @@ function abrirModalEdicaoOrcamento(id) {
         return;
     }
 
-    // Preencher os campos do modal de edição
     document.getElementById('edit-orcamento-id').value = orc.id;
     document.getElementById('edit-orcamento-modal-title').textContent = `Editar Orçamento Nº ${orc.id}`;
     
-    // Carregar clientes no select do modal e selecionar o correto
     carregarClientesNoSelect('edit-orcamento-cliente');
     document.getElementById('edit-orcamento-cliente').value = orc.clienteId;
 
@@ -860,14 +797,11 @@ function abrirModalEdicaoOrcamento(id) {
     document.getElementById('edit-orcamento-relatorio').value = orc.relatorio || '';
     document.getElementById('edit-orcamento-formas-pagamento').value = orc.formasPagamento || '';
 
-    // Renderizar itens e totais no modal
     renderizarItensOrcamentoModalEdicao(orc);
     
-    // Abrir o modal
     document.getElementById('editOrcamentoModal').classList.add('active');
 }
 
-// CORREÇÃO 2: Função para renderizar os itens DENTRO do modal de edição
 function renderizarItensOrcamentoModalEdicao(orc) {
     const tbody = document.querySelector('#edit-orcamento-itens-tabela tbody');
     tbody.innerHTML = '';
@@ -889,7 +823,6 @@ function renderizarItensOrcamentoModalEdicao(orc) {
     calcularTotaisOrcamentoModalEdicao(orc);
 }
 
-// CORREÇÃO 2: Função para calcular os totais DENTRO do modal de edição
 function calcularTotaisOrcamentoModalEdicao(orc) {
     const maoDeObra = parseFloat(document.getElementById('edit-orcamento-mao-de-obra').value) || 0;
     const totalProdutos = orc.itens.reduce((sum, item) => sum + (item.quantidade * item.valor), 0);
@@ -899,7 +832,6 @@ function calcularTotaisOrcamentoModalEdicao(orc) {
 }
 
 
-// CORREÇÃO 2: Função para salvar as alterações feitas no modal de edição
 function salvarAlteracoesOrcamentoPeloModal() {
     const orcamentoId = document.getElementById('edit-orcamento-id').value;
     const orcIndex = orcamentos.findIndex(o => o.id === orcamentoId);
@@ -909,7 +841,6 @@ function salvarAlteracoesOrcamentoPeloModal() {
         return;
     }
 
-    // Atualizar os dados do orçamento com os valores do modal
     orcamentos[orcIndex].clienteId = document.getElementById('edit-orcamento-cliente').value;
     orcamentos[orcIndex].servicos = document.getElementById('edit-orcamento-servicos').value;
     orcamentos[orcIndex].maoDeObra = parseFloat(document.getElementById('edit-orcamento-mao-de-obra').value) || 0;
@@ -923,14 +854,12 @@ function salvarAlteracoesOrcamentoPeloModal() {
 }
 
 
-// CORREÇÃO 3: Função que inicia o processo de exclusão, abrindo o modal de swipe
 function iniciarExclusaoOrcamento(id) {
     const modal = document.getElementById('swipe-confirm-modal');
-    modal.dataset.orcamentoId = id; // Armazena o ID do orçamento a ser excluído
+    modal.dataset.orcamentoId = id;
     modal.classList.add('active');
 }
 
-// CORREÇÃO 3: Função que configura toda a lógica do "arrastar para excluir"
 function configurarSwipeParaExcluir() {
     const modal = document.getElementById('swipe-confirm-modal');
     const container = document.getElementById('swipe-container');
@@ -946,7 +875,7 @@ function configurarSwipeParaExcluir() {
 
     const onDragStart = () => {
         isDragging = true;
-        handle.style.transition = 'none'; // Remove transição durante o arrasto
+        handle.style.transition = 'none';
     };
 
     const onDragMove = (e) => {
@@ -956,7 +885,6 @@ function configurarSwipeParaExcluir() {
         const rect = container.getBoundingClientRect();
         let newLeft = clientX - rect.left - (handle.offsetWidth / 2);
 
-        // Limites
         if (newLeft < 0) newLeft = 0;
         const maxLeft = container.offsetWidth - handle.offsetWidth;
         if (newLeft > maxLeft) {
@@ -971,7 +899,7 @@ function configurarSwipeParaExcluir() {
         const maxLeft = container.offsetWidth - handle.offsetWidth;
         const currentLeft = parseInt(handle.style.left, 10);
 
-        if (currentLeft >= maxLeft * 0.9) { // Se arrastou 90% do caminho
+        if (currentLeft >= maxLeft * 0.9) {
             handle.style.left = `${maxLeft}px`;
             container.classList.add('confirmed');
             setTimeout(() => {
@@ -984,12 +912,10 @@ function configurarSwipeParaExcluir() {
         }
     };
 
-    // Eventos de Mouse
     handle.addEventListener('mousedown', onDragStart);
     document.addEventListener('mousemove', onDragMove);
     document.addEventListener('mouseup', onDragEnd);
     
-    // Eventos de Toque
     handle.addEventListener('touchstart', onDragStart);
     document.addEventListener('touchmove', onDragMove, { passive: false });
     document.addEventListener('touchend', onDragEnd);
@@ -1000,12 +926,11 @@ function configurarSwipeParaExcluir() {
     });
 }
 
-// CORREÇÃO 3: Lógica de exclusão refatorada. Agora é chamada APÓS a confirmação no modal.
 function excluirOrcamentoSalvo(id) {
     orcamentos = orcamentos.filter(o => o.id !== id);
     saveData();
     renderizarOrcamentosSalvos();
-    renderizarFaturamentosGerados(); // Atualiza a lista de faturamentos caso o orçamento excluído tivesse um.
+    renderizarFaturamentosGerados();
     if (currentOrcamento.id === id) {
         novoOrcamento();
     }
@@ -1162,222 +1087,272 @@ function renderizarFaturamentosGerados() {
     });
 }
 
-// Nota Fornecedor (sem alterações)
-const MAX_NFE_CHAVES = 3; 
+// =======================================================
+// ========= INÍCIO DAS NOVAS FUNÇÕES PARA BOLETOS =========
+// =======================================================
 
-function carregarChavesNFEParaOrcamentoSelecionado() {
-    const orcamentoId = document.getElementById('nfe-orcamento-vinculado').value;
-    const nfePanel = document.getElementById('nfe-management-panel');
-    nfePanel.innerHTML = ''; 
+function renderCalendar() {
+    const calendarDays = document.getElementById('calendar-days');
+    const monthYearDisplay = document.getElementById('month-year-display');
+    const weekdaysContainer = document.getElementById('calendar-weekdays');
 
-    if (!orcamentoId) {
-        nfePanel.innerHTML = '<div class="nfe-placeholder"><i class="fas fa-arrow-up"></i><p>Selecione um orçamento acima para começar.</p></div>';
-        return;
-    }
+    calendarDays.innerHTML = '';
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
 
-    const orc = orcamentos.find(o => o.id === orcamentoId);
-    if (orc && !orc.nfeChaves) {
-        orc.nfeChaves = [];
-    }
-
-    for (let i = 0; i < MAX_NFE_CHAVES; i++) {
-        const entry = (orc && orc.nfeChaves[i]) ? orc.nfeChaves[i] : { chave: '', fornecedor: '' };
-        adicionarCampoChaveNFE(entry, i);
-    }
-}
-
-function adicionarCampoChaveNFE(initialEntry = { chave: '', fornecedor: '' }, index) {
-    const nfePanel = document.getElementById('nfe-management-panel');
-
-    const div = document.createElement('div');
-    div.classList.add('nfe-input-group');
-    div.dataset.index = index;
-
-    const formattedChave = initialEntry.chave ? initialEntry.chave.replace(/(\d{4})(?=\d)/g, '$1-') : '';
-
-    div.innerHTML = `
-        <label for="nfe-chave-${index}">CHAVE DE ACESSO DA NF-E ${index + 1}:</label>
-        <input type="text" id="nfe-chave-${index}"
-               placeholder="Somente números, 44 dígitos"
-               value="${formattedChave}"
-               maxlength="54">
-        
-        <label for="nfe-fornecedor-${index}">Fornecedor:</label>
-        <input type="text" id="nfe-fornecedor-${index}"
-               placeholder="Nome do Fornecedor"
-               value="${initialEntry.fornecedor || ''}">
-        
-        <div class="nfe-actions">
-            <button type="button" class="btn-primary btn-salvar-nfe" data-index="${index}" title="Salvar"><i class="fas fa-save"></i></button>
-            <button type="button" class="btn-editar btn-editar-nfe" data-index="${index}" title="Editar"><i class="fas fa-edit"></i></button>
-            <button type="button" class="btn-secondary btn-gerar-nfe" data-index="${index}" title="Copiar e Abrir Consulta"><i class="fas fa-external-link-alt"></i></button>
-            <button type="button" class="btn-danger btn-excluir-nfe" data-index="${index}" title="Excluir"><i class="fas fa-trash-alt"></i></button>
-        </div>
-    `;
-    nfePanel.appendChild(div);
-
-    const inputField = document.getElementById(`nfe-chave-${index}`);
-    inputField.addEventListener('input', formatNFEChaveInput);
-
-    const fornecedorField = document.getElementById(`nfe-fornecedor-${index}`);
-    const saveButton = div.querySelector('.btn-salvar-nfe');
-    const editButton = div.querySelector('.btn-editar-nfe');
-
-    if (initialEntry.chave) {
-        inputField.disabled = true;
-        fornecedorField.disabled = true;
-        saveButton.style.display = 'none';
-        editButton.style.display = 'inline-flex';
-    } else { 
-        inputField.disabled = false;
-        fornecedorField.disabled = false;
-        saveButton.style.display = 'inline-flex';
-        editButton.style.display = 'none';
-    }
-}
-
-function formatNFEChaveInput(event) {
-    let value = event.target.value.replace(/\D/g, ''); 
-    let formattedValue = '';
-    for (let i = 0; i < value.length; i++) {
-        if (i > 0 && i % 4 === 0) {
-            formattedValue += '-';
-        }
-        formattedValue += value[i];
-    }
-    event.target.value = formattedValue.substring(0, 54);
-}
-
-function salvarChaveNFE(index) {
-    const orcamentoId = document.getElementById('nfe-orcamento-vinculado').value;
-    if (!orcamentoId) { alert('Erro: Orçamento não selecionado.'); return; }
-
-    const orc = orcamentos.find(o => o.id === orcamentoId);
-    if (!orc) { alert('Orçamento não encontrado.'); return; }
-
-    const inputFieldChave = document.getElementById(`nfe-chave-${index}`);
-    const inputFieldFornecedor = document.getElementById(`nfe-fornecedor-${index}`);
+    monthYearDisplay.textContent = `${currentCalendarDate.toLocaleString('pt-BR', { month: 'long' })} ${year}`;
     
-    let chaveLimpa = inputFieldChave.value.replace(/\D/g, '');
-    const fornecedor = inputFieldFornecedor.value.trim();
+    // Renderiza os dias da semana
+    weekdaysContainer.innerHTML = '';
+    const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    weekdays.forEach(day => {
+        weekdaysContainer.innerHTML += `<div>${day}</div>`;
+    });
 
-    if (chaveLimpa.length !== 44) {
-        alert('A chave de acesso da NF-e deve ter 44 dígitos numéricos.');
+    const firstDayOfMonth = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+
+    // Preenche os dias vazios no início do mês
+    for (let i = 0; i < firstDayOfMonth; i++) {
+        calendarDays.innerHTML += `<div class="calendar-day not-current-month"></div>`;
+    }
+
+    // Preenche os dias do mês
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'calendar-day';
+        dayDiv.textContent = day;
+        const currentDateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        dayDiv.dataset.date = currentDateString;
+
+        if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+            dayDiv.classList.add('today');
+        }
+
+        // Adiciona pontos de evento
+        const boletosOnDay = boletos.filter(b => b.vencimento === currentDateString && b.status === 'pendente');
+        if (boletosOnDay.length > 0) {
+            const dotsContainer = document.createElement('div');
+            dotsContainer.className = 'event-dots';
+            if (boletosOnDay.some(b => b.type === 'fornecedor')) {
+                dotsContainer.innerHTML += '<div class="event-dot red"></div>';
+            }
+            if (boletosOnDay.some(b => b.type === 'cliente')) {
+                dotsContainer.innerHTML += '<div class="event-dot yellow"></div>';
+            }
+            dayDiv.appendChild(dotsContainer);
+        }
+        
+        dayDiv.addEventListener('click', () => openDayDetailsModal(currentDateString));
+        calendarDays.appendChild(dayDiv);
+    }
+}
+
+function changeMonth(offset) {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
+    renderCalendar();
+}
+
+function salvarBoleto(type) {
+    const form = document.getElementById(`boleto-${type}-form`);
+    const nome = form.querySelector(`#boleto-${type}-nome`).value.trim();
+    const detalhes = form.querySelector(`#boleto-${type}-${type === 'cliente' ? 'servico' : 'material'}`).value.trim();
+    const vencimento = form.querySelector(`#boleto-${type}-vencimento`).value;
+    const valor = parseFloat(form.querySelector(`#boleto-${type}-valor`).value);
+    const parcelas = parseInt(form.querySelector(`#boleto-${type}-parcelas`).value) || 1;
+
+    if (!nome || !detalhes || !vencimento || isNaN(valor)) {
+        alert('Preencha todos os campos obrigatórios corretamente.');
         return;
     }
-    if (!fornecedor) {
-        alert('O nome do fornecedor é obrigatório.');
-        return;
-    }
 
-    if (!Array.isArray(orc.nfeChaves)) {
-        orc.nfeChaves = [];
-    }
-    while (orc.nfeChaves.length <= index) {
-        orc.nfeChaves.push(null); 
-    }
+    const originalId = generateAlphanumericUniqueId();
+    let dataVencimento = new Date(vencimento + 'T12:00:00'); // Adiciona T12:00 para evitar problemas de fuso horário
 
-    orc.nfeChaves[index] = { chave: chaveLimpa, fornecedor: fornecedor };
-
-    inputFieldChave.value = chaveLimpa.replace(/(\d{4})(?=\d)/g, '$1-');
+    for (let i = 0; i < parcelas; i++) {
+        const vencimentoFormatado = dataVencimento.toISOString().split('T')[0];
+        
+        const novoBoleto = {
+            id: generateAlphanumericUniqueId(),
+            originalId: originalId,
+            type: type,
+            nome: nome,
+            detalhes: detalhes,
+            valor: valor,
+            vencimento: vencimentoFormatado,
+            parcela: { atual: i + 1, total: parcelas },
+            status: 'pendente' // 'pendente' ou 'pago'
+        };
+        boletos.push(novoBoleto);
+        
+        // Incrementa o mês para a próxima parcela
+        dataVencimento.setMonth(dataVencimento.getMonth() + 1);
+    }
 
     saveData();
-    renderizarOrcamentosSalvos();
-
-    inputFieldChave.disabled = true;
-    inputFieldFornecedor.disabled = true;
-    const groupDiv = inputFieldChave.closest('.nfe-input-group');
-    groupDiv.querySelector('.btn-salvar-nfe').style.display = 'none';
-    groupDiv.querySelector('.btn-editar-nfe').style.display = 'inline-flex';
-
-    alert('Chave de acesso e Fornecedor salvos com sucesso!');
+    renderCalendar();
+    checkForUpcomingBoletos();
+    alert(`${parcelas} boleto(s) de ${type} adicionado(s) com sucesso!`);
+    form.reset();
 }
 
-function editarChaveNFE(index) {
-    const inputFieldChave = document.getElementById(`nfe-chave-${index}`);
-    const inputFieldFornecedor = document.getElementById(`nfe-fornecedor-${index}`);
-    const groupDiv = inputFieldChave.closest('.nfe-input-group');
 
-    inputFieldChave.disabled = false;
-    inputFieldFornecedor.disabled = false;
+function checkForUpcomingBoletos() {
+    const alertIcon = document.getElementById('alert-icon-container');
+    const today = new Date();
+    const sevenDaysLater = new Date();
+    sevenDaysLater.setDate(today.getDate() + 7);
 
-    groupDiv.querySelector('.btn-salvar-nfe').style.display = 'inline-flex';
-    groupDiv.querySelector('.btn-editar-nfe').style.display = 'none';
-    inputFieldChave.focus();
-}
+    const todayStr = today.toISOString().split('T')[0];
+    const sevenDaysLaterStr = sevenDaysLater.toISOString().split('T')[0];
 
-function excluirChaveNFE(index) {
-    if (!confirm('Tem certeza que deseja excluir esta chave de acesso da NF-e e o fornecedor associado?')) {
-        return;
-    }
+    const upcomingBoletos = boletos.filter(b => 
+        b.status === 'pendente' && 
+        b.vencimento >= todayStr && 
+        b.vencimento <= sevenDaysLaterStr
+    );
 
-    const orcamentoId = document.getElementById('nfe-orcamento-vinculado').value;
-    const orc = orcamentos.find(o => o.id === orcamentoId);
-    if (!orc) { alert('Orçamento não encontrado.'); return; }
-
-    if (orc.nfeChaves && orc.nfeChaves.length > index) {
-        orc.nfeChaves[index] = null;
-        while (orc.nfeChaves.length > 0 && orc.nfeChaves[orc.nfeChaves.length - 1] === null) {
-            orc.nfeChaves.pop();
-        }
-
-        saveData();
-        renderizarOrcamentosSalvos();
-        carregarChavesNFEParaOrcamentoSelecionado(); 
-        alert('Chave de acesso e Fornecedor excluídos com sucesso!');
-    }
-}
-
-function gerarNFEFromChave(index) {
-    const orcamentoId = document.getElementById('nfe-orcamento-vinculado').value;
-    const orc = orcamentos.find(o => o.id === orcamentoId);
-    if (!orc || !orc.nfeChaves || !orc.nfeChaves[index] || !orc.nfeChaves[index].chave) {
-        alert('Chave de acesso não encontrada para este campo.');
-        return;
-    }
-    const chaveAcessoLimpa = orc.nfeChaves[index].chave;
-
-    navigator.clipboard.writeText(chaveAcessoLimpa).then(() => {
-        alert(`Chave de acesso copiada para a área de transferência: ${chaveAcessoLimpa}\n\nO site de consulta será aberto para você colar a chave.`);
-        window.open('https://consultadanfe.com/', '_blank');
-    }).catch(err => {
-        console.error('Erro ao copiar chave:', err);
-        alert(`Não foi possível copiar a chave automaticamente. Por favor, copie manualmente: ${chaveAcessoLimpa}\n\nO site de consulta será aberto.`);
-        window.open('https://consultadanfe.com/', '_blank');
-    });
-}
-
-function visualizarNFE(orcamentoId) {
-    const orc = orcamentos.find(o => o.id === orcamentoId);
-    if (orc && orc.nfeChaves && orc.nfeChaves.filter(n => n).length > 0) {
-        let content = '<h3>Chaves de Acesso da NF-e vinculadas ao Orçamento Nº ' + orcamentoId + ':</h3><ul>';
-        orc.nfeChaves.forEach((entry, index) => {
-            if (entry) {
-                const chave = entry.chave || 'N/A';
-                const fornecedor = entry.fornecedor || 'N/A';
-                content += `<li>NF-e ${index + 1}: <strong>${chave}</strong> <br> Fornecedor: ${fornecedor}</li>`;
-            }
-        });
-        content += '</ul><p>Para gerenciar estas notas, vá para a aba "Nota Fornecedor" e selecione este orçamento.</p>';
-
-        const win = window.open("", "_blank", "width=600,height=400");
-        win.document.write(`
-            <html>
-            <head><title>Detalhes da NF-e</title>
-            <style>body{font-family:sans-serif;padding:20px;background-color:#f4f4f4;color:#333}h3{color:#005166}ul{list-style-type:none;padding:0}li{margin-bottom:10px;padding:10px;background-color:#e0e0e0;border-radius:5px}strong{color:#007bff}p{font-size:0.9em;color:#666}</style>
-            </head>
-            <body>${content}</body>
-            </html>`);
+    if (upcomingBoletos.length > 0) {
+        alertIcon.style.display = 'block';
     } else {
-        alert('Nenhuma NF-e anexada a este orçamento.');
+        alertIcon.style.display = 'none';
     }
 }
+
+function openUpcomingBoletosModal() {
+    const modal = document.getElementById('upcoming-boletos-modal');
+    const listContainer = document.getElementById('upcoming-boletos-list');
+    listContainer.innerHTML = '';
+
+    const today = new Date();
+    const sevenDaysLater = new Date();
+    sevenDaysLater.setDate(today.getDate() + 7);
+    const todayStr = today.toISOString().split('T')[0];
+    const sevenDaysLaterStr = sevenDaysLater.toISOString().split('T')[0];
+
+    // Popula a lista de compromissos para os próximos 7 dias
+    const upcomingBoletos = boletos
+        .filter(b => b.status === 'pendente' && b.vencimento >= todayStr && b.vencimento <= sevenDaysLaterStr)
+        .sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento));
+
+    if (upcomingBoletos.length === 0) {
+        listContainer.innerHTML = '<p style="text-align: center;">Nenhum compromisso vencendo nos próximos 7 dias.</p>';
+    } else {
+        upcomingBoletos.forEach(boleto => {
+            listContainer.innerHTML += createBoletoItemHTML(boleto);
+        });
+    }
+
+    // Calcula os totais para o mês atual
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const boletosThisMonth = boletos.filter(b => {
+        const vencimentoDate = new Date(b.vencimento + 'T12:00:00');
+        return b.status === 'pendente' && vencimentoDate.getMonth() === currentMonth && vencimentoDate.getFullYear() === currentYear;
+    });
+
+    const countFornecedor = boletosThisMonth.filter(b => b.type === 'fornecedor').length;
+    const countCliente = boletosThisMonth.filter(b => b.type === 'cliente').length;
+    
+    document.querySelector('.count-circle-red').textContent = countFornecedor;
+    document.querySelector('.count-circle-yellow').textContent = countCliente;
+
+    modal.classList.add('active');
+}
+
+function openDayDetailsModal(dateString) {
+    const modal = document.getElementById('day-details-modal');
+    const title = document.getElementById('day-details-title');
+    const listContainer = document.getElementById('day-details-list');
+    listContainer.innerHTML = '';
+
+    const [year, month, day] = dateString.split('-');
+    title.textContent = `Compromissos para ${day}/${month}/${year}`;
+
+    const boletosOnDay = boletos.filter(b => b.vencimento === dateString);
+
+    if (boletosOnDay.length === 0) {
+        listContainer.innerHTML = '<p style="text-align: center;">Nenhum compromisso para esta data.</p>';
+    } else {
+        boletosOnDay.forEach(boleto => {
+             listContainer.innerHTML += createBoletoItemHTML(boleto, true); // Adiciona botões de ação
+        });
+    }
+
+    modal.classList.add('active');
+}
+
+function createBoletoItemHTML(boleto, withActions = false) {
+    const parcelaInfo = boleto.parcela.total > 1 ? ` (Parcela ${boleto.parcela.atual}/${boleto.parcela.total})` : '';
+    const vencimentoFmt = new Date(boleto.vencimento + 'T12:00:00').toLocaleDateString('pt-BR');
+    
+    let actionsHTML = '';
+    if (withActions) {
+        actionsHTML = `<div class="boleto-actions">`;
+        if (boleto.status === 'pendente') {
+            actionsHTML += `<button class="btn-secondary btn-sm" onclick="marcarBoletoPago('${boleto.id}')"><i class="fas fa-check"></i> Marcar como Pago</button>`;
+        }
+        actionsHTML += `<button class="btn-danger btn-sm" onclick="excluirBoleto('${boleto.id}', ${boleto.parcela.total > 1})"><i class="fas fa-trash-alt"></i> Excluir</button>
+        </div>`;
+    }
+
+    return `
+        <div class="boleto-item ${boleto.type} ${boleto.status === 'pago' ? 'paid' : ''}">
+            <p class="boleto-header">${boleto.nome}${parcelaInfo}</p>
+            <p>${boleto.detalhes}</p>
+            <p><strong>Vencimento:</strong> ${vencimentoFmt}</p>
+            <p class="boleto-value"><strong>Valor:</strong> ${formatarMoeda(boleto.valor)}</p>
+            ${actionsHTML}
+        </div>
+    `;
+}
+
+function marcarBoletoPago(id) {
+    const boletoIndex = boletos.findIndex(b => b.id === id);
+    if (boletoIndex > -1) {
+        boletos[boletoIndex].status = 'pago';
+        saveData();
+        renderCalendar();
+        checkForUpcomingBoletos();
+        closeModal('day-details-modal');
+        alert('Compromisso marcado como finalizado!');
+    }
+}
+
+function excluirBoleto(id, isParcelado) {
+    let confirmMessage = 'Tem certeza que deseja excluir este boleto?';
+    if (isParcelado) {
+        confirmMessage = 'Este boleto faz parte de um parcelamento. Deseja excluir apenas esta parcela ou todas as parcelas futuras?';
+        const choice = prompt(confirmMessage + '\nDigite "ESTA" para excluir apenas esta ou "TODAS" para excluir esta e as futuras.');
+
+        if (choice && choice.toUpperCase() === 'TODAS') {
+            const boleto = boletos.find(b => b.id === id);
+            if (boleto) {
+                boletos = boletos.filter(b => b.originalId !== boleto.originalId || b.parcela.atual < boleto.parcela.atual);
+            }
+        } else if (choice && choice.toUpperCase() === 'ESTA') {
+            boletos = boletos.filter(b => b.id !== id);
+        } else {
+            return; // Cancelar se a resposta não for válida
+        }
+    } else {
+        if (!confirm(confirmMessage)) return;
+        boletos = boletos.filter(b => b.id !== id);
+    }
+
+    saveData();
+    renderCalendar();
+    checkForUpcomingBoletos();
+    closeModal('day-details-modal');
+    alert('Boleto(s) excluído(s) com sucesso!');
+}
+
 
 // Funções de Modal
-// CORREÇÃO 1 e 2: `openItemModal` agora aceita um segundo parâmetro `source` para saber de onde foi chamado
 function openItemModal(itemIndex = -1, source = 'current') {
     const modal = document.getElementById('itemModal');
-    modal.dataset.source = source; // Armazena a origem da chamada
+    modal.dataset.source = source;
     const form = document.getElementById('item-form');
     form.reset();
     isEditingItem = itemIndex > -1;
@@ -1404,19 +1379,22 @@ function openItemModal(itemIndex = -1, source = 'current') {
         document.getElementById('modal-valor').value = item.valor.toFixed(2);
         modal.querySelector('h3').textContent = 'Editar Item';
         modal.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-edit"></i> Atualizar Item';
-        deleteBtn.style.display = 'inline-block'; // Mostra o botão de excluir
+        deleteBtn.style.display = 'inline-block';
     } else {
         carregarProdutosNoModalPorCategoria();
         modal.querySelector('h3').textContent = 'Adicionar Item';
         modal.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus-circle"></i> Adicionar Item';
-        deleteBtn.style.display = 'none'; // Esconde o botão de excluir
+        deleteBtn.style.display = 'none';
     }
     modal.classList.add('active');
 }
 
 
 function closeModal(modalId) {
-    document.getElementById(modalId).classList.remove('active');
+    const modal = document.getElementById(modalId);
+    if(modal) {
+        modal.classList.remove('active');
+    }
 }
 
 function carregarCategoriasNoModalItem() {

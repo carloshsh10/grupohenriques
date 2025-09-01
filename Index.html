@@ -191,8 +191,13 @@
                     <p>CNPJ: 22.827.727/0001-80</p>
                 </div>
             </div>
-             <div id="cloud-status-container">
-                Firebase Cloud: <span id="firebase-cloud-status">Desconectado</span>
+             <div id="header-status-area">
+                <div id="alert-icon-container">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div id="cloud-status-container">
+                    Firebase Cloud: <span id="firebase-cloud-status">Desconectado</span>
+                </div>
             </div>
         </header>
 
@@ -203,7 +208,7 @@
                     <li><a href="#" id="nav-produtos"><i class="fas fa-box-open"></i> Produtos</a></li>
                     <li><a href="#" id="nav-orcamentos"><i class="fas fa-file-invoice-dollar"></i> Orçamentos</a></li>
                     <li><a href="#" id="nav-faturamento"><i class="fas fa-cash-register"></i> Faturamento</a></li>
-                    <li><a href="#" id="nav-nota-fornecedor"><i class="fas fa-receipt"></i> Nota Fornecedor</a></li>
+                    <li><a href="#" id="nav-boletos"><i class="fas fa-calendar-alt"></i> Boletos</a></li>
                     <li><a href="#" id="nav-backup"><i class="fas fa-cloud-upload-alt"></i> Backup & Restore</a></li>
                 </ul>
             </nav>
@@ -377,20 +382,73 @@
                     <div id="lista-faturamentos-gerados">
                     </div>
                 </section>
-
-                <section id="nota-fornecedor-section">
-                    <h2><i class="fas fa-receipt"></i> Gerenciar Notas de Fornecedor</h2>
-                    <form id="nfe-form">
-                         <div class="form-group">
-                            <label for="nfe-orcamento-vinculado">Selecione o Orçamento para Gerenciar as NF-e:</label>
-                            <select id="nfe-orcamento-vinculado" required>
-                                <option value="">Selecione um orçamento...</option>
-                            </select>
+                
+                <section id="boletos-section">
+                    <h2><i class="fas fa-calendar-alt"></i> Controle de Boletos</h2>
+                    <div id="calendar-container">
+                        <div id="calendar-header">
+                            <button id="prev-month-btn"><i class="fas fa-chevron-left"></i></button>
+                            <h3 id="month-year-display"></h3>
+                            <button id="next-month-btn"><i class="fas fa-chevron-right"></i></button>
                         </div>
+                        <div id="calendar-weekdays"></div>
+                        <div id="calendar-days"></div>
+                    </div>
 
-                        <div id="nfe-management-panel">
+                    <div class="boletos-forms-container">
+                        <div class="boleto-form-wrapper">
+                            <h3><i class="fas fa-user-tie"></i> Novo Boleto de Cliente</h3>
+                            <form id="boleto-cliente-form">
+                                <div class="form-group">
+                                    <label for="boleto-cliente-nome">Nome do Cliente:</label>
+                                    <input type="text" id="boleto-cliente-nome" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="boleto-cliente-servico">Serviço:</label>
+                                    <input type="text" id="boleto-cliente-servico" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="boleto-cliente-vencimento">Data de Vencimento:</label>
+                                    <input type="date" id="boleto-cliente-vencimento" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="boleto-cliente-valor">Valor (R$):</label>
+                                    <input type="number" step="0.01" id="boleto-cliente-valor" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="boleto-cliente-parcelas">Repetir por (meses):</label>
+                                    <input type="number" id="boleto-cliente-parcelas" min="1" value="1">
+                                </div>
+                                <button type="submit" class="btn-primary"><i class="fas fa-plus-circle"></i> Adicionar Boleto</button>
+                            </form>
                         </div>
-                    </form>
+                        <div class="boleto-form-wrapper">
+                            <h3><i class="fas fa-dolly"></i> Novo Boleto de Fornecedor</h3>
+                            <form id="boleto-fornecedor-form">
+                                <div class="form-group">
+                                    <label for="boleto-fornecedor-nome">Nome do Fornecedor:</label>
+                                    <input type="text" id="boleto-fornecedor-nome" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="boleto-fornecedor-material">Material (Cliente):</label>
+                                    <input type="text" id="boleto-fornecedor-material" placeholder="Material referente a qual cliente?" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="boleto-fornecedor-vencimento">Data de Vencimento:</label>
+                                    <input type="date" id="boleto-fornecedor-vencimento" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="boleto-fornecedor-valor">Valor (R$):</label>
+                                    <input type="number" step="0.01" id="boleto-fornecedor-valor" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="boleto-fornecedor-parcelas">Repetir por (meses):</label>
+                                    <input type="number" id="boleto-fornecedor-parcelas" min="1" value="1">
+                                </div>
+                                <button type="submit" class="btn-primary"><i class="fas fa-plus-circle"></i> Adicionar Boleto</button>
+                            </form>
+                        </div>
+                    </div>
                 </section>
 
                 <section id="backup-section">
@@ -455,7 +513,6 @@
             </form>
         </div>
     </div>
-
     <div id="produtosCategoriaModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="close-produtos-categoria-modal">&times;</span>
@@ -464,21 +521,18 @@
                 </div>
         </div>
     </div>
-    
     <div id="editOrcamentoModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="edit-orcamento-modal-title">Editar Orçamento</h3>
                 <span class="close-modal" id="close-edit-orcamento-modal">&times;</span>
             </div>
-            
             <div class="modal-body-scrollable">
                 <form id="edit-orcamento-form">
                     <input type="hidden" id="edit-orcamento-id">
                     <div class="form-group">
                         <label for="edit-orcamento-cliente">Cliente:</label>
-                        <select id="edit-orcamento-cliente" required>
-                            </select>
+                        <select id="edit-orcamento-cliente" required></select>
                     </div>
                     <div class="form-group">
                         <label for="edit-orcamento-servicos">Descrição dos Serviços:</label>
@@ -497,12 +551,10 @@
                         <textarea id="edit-orcamento-formas-pagamento" rows="2"></textarea>
                     </div>
                 </form>
-
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
                     <h4>Itens do Orçamento</h4>
                     <button type="button" id="add-item-to-edited-orcamento-btn" class="btn-secondary btn-sm"><i class="fas fa-plus-circle"></i> Adicionar Item</button>
                 </div>
-
                 <div class="table-container">
                     <table id="edit-orcamento-itens-tabela">
                         <thead>
@@ -522,7 +574,6 @@
                     <p><strong>Total Geral:</strong> <span id="edit-total-geral">R$ 0,00</span></p>
                 </div>
             </div>
-
             <div class="modal-footer">
                 <div class="form-actions">
                     <button type="button" id="save-orcamento-changes-btn" class="btn-primary"><i class="fas fa-save"></i> Salvar Alterações</button>
@@ -530,8 +581,6 @@
             </div>
         </div>
     </div>
-
-
     <div id="swipe-confirm-modal" class="modal">
         <div class="modal-content">
             <h3>Confirmar Exclusão</h3>
@@ -544,6 +593,28 @@
         </div>
     </div>
 
+    <div id="upcoming-boletos-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3><i class="fas fa-exclamation-triangle"></i> Compromissos Próximos</h3>
+            <div id="upcoming-boletos-summary">
+                <p>Compromissos do mês atual:</p>
+                <div class="summary-counts">
+                    <span class="count-circle-red"></span> Boletos Fornecedor
+                    <span class="count-circle-yellow"></span> Boletos Cliente
+                </div>
+            </div>
+            <div id="upcoming-boletos-list"></div>
+        </div>
+    </div>
+    
+    <div id="day-details-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 id="day-details-title"></h3>
+            <div id="day-details-list"></div>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
