@@ -520,6 +520,24 @@ table tbody tr:hover {
     transform: rotate(90deg);
 }
 
+/* ================================================= */
+/* SOLUÇÃO DEFINITIVA PARA SOBREPOSIÇÃO DE MODAIS    */
+/* ================================================= */
+/* O z-index base de 1000 já é definido na classe .modal. */
+/* O modal #editOrcamentoModal usará essa base. */
+
+/* Define uma camada SUPERIOR para o modal de item, garantindo que ele sempre apareça na frente */
+#itemModal {
+    z-index: 1010;
+}
+
+/* Garante que o modal de confirmação de exclusão fique sobre TODOS os outros */
+#swipe-confirm-modal {
+    z-index: 1020;
+}
+/* ================================================= */
+
+
 /* Estilos para a seção de backup */
 .backup-actions {
     display: flex;
@@ -1162,4 +1180,3 @@ footer {
 }
 
 /* ========= FIM DOS ESTILOS DA SPLASH SCREEN ========= */
-
