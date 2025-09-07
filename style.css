@@ -526,6 +526,7 @@ table tbody tr:hover {
 #itemModal { z-index: 1010; }
 #upcoming-boletos-modal { z-index: 1010; }
 #day-details-modal { z-index: 1010; }
+#cliente-details-modal { z-index: 1010; } /* NOVO */
 #swipe-confirm-modal { z-index: 1020; }
 /* ================================================= */
 
@@ -700,6 +701,86 @@ footer {
     height: 48px; /* Alinha com a altura do input */
 }
 
+/* ===================================================== */
+/* ========= NOVOS ESTILOS PARA SEÇÃO DE CLIENTES ====== */
+/* ===================================================== */
+
+#clientes-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.cliente-card {
+    background-color: var(--cor-fundo-secundario);
+    border: 1px solid var(--cor-borda);
+    border-left: 5px solid var(--cor-destaque-secundaria);
+    border-radius: var(--border-radius-padrao);
+    padding: 20px;
+    cursor: pointer;
+    transition: var(--transition-suave);
+    box-shadow: 0 2px 8px var(--cor-sombra);
+}
+
+.cliente-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px var(--cor-sombra);
+    border-left-color: var(--cor-destaque-primaria);
+}
+
+.cliente-card h4 {
+    color: var(--cor-destaque-primaria);
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cliente-card p {
+    font-size: 0.9rem;
+    color: var(--cor-texto-secundario);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.cliente-card p i {
+    width: 15px; /* Alinhamento dos ícones */
+    text-align: center;
+}
+
+#cliente-details-modal .modal-content {
+    max-width: 600px;
+}
+
+#cliente-modal-body p {
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+    color: var(--cor-texto-secundario);
+    border-bottom: 1px solid var(--cor-borda);
+    padding-bottom: 10px;
+}
+#cliente-modal-body p:last-child {
+    border-bottom: none;
+}
+
+#cliente-modal-body strong {
+    color: var(--cor-texto-principal);
+}
+
+#cliente-modal-body span {
+    color: var(--cor-destaque-primaria);
+    word-break: break-all;
+}
+
+#cliente-details-modal .modal-footer {
+    padding-top: 20px;
+    border-top: 1px solid var(--cor-borda);
+    margin-top: 10px;
+}
 
 /* Responsividade Básica */
 @media (max-width: 992px) {
@@ -888,8 +969,8 @@ footer {
     #produtosCategoriaModal .modal-content {
         max-width: 95%;
     }
-    #categorias-container {
-        grid-template-columns: 1fr; /* Una columna en pantallas muy pequeñas */
+    #categorias-container, #clientes-cards-container {
+        grid-template-columns: 1fr; /* Una columna en pantallas muy pequenas */
     }
     .parcela-row {
         flex-direction: column;

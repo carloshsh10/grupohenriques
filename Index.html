@@ -238,21 +238,10 @@
                             <button type="submit" id="salvar-novo-cliente-btn" class="btn-primary"><i class="fas fa-save"></i> Salvar & Novo</button>
                         </div>
                     </form>
-                    <div class="table-container">
-                        <table id="clientes-tabela">
-                            <thead>
-                                <tr>
-                                    <th>Nome ou Empresa</th>
-                                    <th>CPF ou CNPJ</th>
-                                    <th>Telefone</th>
-                                    <th>Endereço</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                </tbody>
-                        </table>
-                    </div>
+                    
+                    <h3 class="mt-20">Clientes Salvos</h3>
+                    <div id="clientes-cards-container">
+                        </div>
                 </section>
 
                 <section id="produtos-section">
@@ -479,6 +468,26 @@
             <p>&copy; <span id="current-year">2024</span> GRUPO HENRI SISTEMAS - Segurança Eletrônica. Todos os direitos reservados.</p>
         </footer>
     </div>
+    
+    <div id="cliente-details-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 id="cliente-modal-title">Detalhes do Cliente</h3>
+            <div id="cliente-modal-body">
+                <p><strong>Nome/Empresa:</strong> <span id="cliente-detalhe-nome"></span></p>
+                <p><strong>CPF/CNPJ:</strong> <span id="cliente-detalhe-cpf-cnpj"></span></p>
+                <p><strong>Telefone:</strong> <span id="cliente-detalhe-telefone"></span></p>
+                <p><strong>Endereço:</strong> <span id="cliente-detalhe-endereco"></span></p>
+            </div>
+            <div class="modal-footer">
+                <div class="form-actions">
+                    <button type="button" id="cliente-modal-edit-btn" class="btn-editar"><i class="fas fa-edit"></i> Editar</button>
+                    <button type="button" id="cliente-modal-delete-btn" class="btn-danger"><i class="fas fa-trash-alt"></i> Excluir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <div id="itemModal" class="modal">
         <div class="modal-content">

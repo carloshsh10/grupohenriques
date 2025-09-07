@@ -121,6 +121,9 @@ function configurarEventListeners() {
     document.getElementById('alert-icon-container').addEventListener('click', openUpcomingBoletosModal);
     document.querySelector('#upcoming-boletos-modal .close-modal').addEventListener('click', () => closeModal('upcoming-boletos-modal'));
     document.querySelector('#day-details-modal .close-modal').addEventListener('click', () => closeModal('day-details-modal'));
+    
+    // ========= NOVO EVENT LISTENER PARA MODAL DE CLIENTE =========
+    document.querySelector('#cliente-details-modal .close-modal').addEventListener('click', () => closeModal('cliente-details-modal'));
 
 }
 
@@ -357,7 +360,8 @@ function formatarMoeda(valor) {
     return 'R$ ' + parseFloat(valor).toFixed(2).replace('.', ',');
 }
 
-// Clientes (sem alterações)
+// ========= FUNÇÕES DE CLIENTES (MODIFICADAS) =========
+
 function salvarCliente() {
     const id = document.getElementById('cliente-id').value;
     const nome = document.getElementById('cliente-nome').value.trim();
@@ -399,22 +403,49 @@ function salvarE䡊ovoCliente() {
 }
 
 function renderizarClientes() {
-    const tbody = document.querySelector('#clientes-tabela tbody');
-    tbody.innerHTML = '';
+    const container = document.getElementById('clientes-cards-container');
+    container.innerHTML = '';
+    
+    if (clientes.length === 0) {
+        container.innerHTML = '<p>Nenhum cliente cadastrado.</p>';
+        return;
+    }
+
     clientes.forEach(cliente => {
-        const row = tbody.insertRow();
-        row.insertCell().textContent = cliente.nome;
-        row.insertCell().textContent = cliente.cpfCnpj || 'N/A';
-        row.insertCell().textContent = cliente.telefone || 'N/A';
-        row.insertCell().textContent = cliente.endereco || 'N/A';
-        const acoesCell = row.insertCell();
-        acoesCell.innerHTML = `
-            <button class="btn-editar" onclick="editarCliente('${cliente.id}')"><i class="fas fa-edit"></i></button>
-            <button class="btn-excluir" onclick="excluirCliente('${cliente.id}')"><i class="fas fa-trash-alt"></i></button>
+        const card = document.createElement('div');
+        card.className = 'cliente-card';
+        card.setAttribute('onclick', `abrirModalDetalhesCliente('${cliente.id}')`);
+        
+        card.innerHTML = `
+            <h4>${cliente.nome}</h4>
+            <p><i class="fas fa-phone"></i> ${cliente.telefone || 'Não informado'}</p>
+            <p><i class="fas fa-map-marker-alt"></i> ${cliente.endereco || 'Não informado'}</p>
         `;
+        container.appendChild(card);
     });
+    
     carregarClientesNoSelect('orcamento-cliente');
 }
+
+function abrirModalDetalhesCliente(id) {
+    const cliente = clientes.find(c => c.id === id);
+    if (!cliente) return;
+
+    document.getElementById('cliente-detalhe-nome').textContent = cliente.nome;
+    document.getElementById('cliente-detalhe-cpf-cnpj').textContent = cliente.cpfCnpj || 'Não informado';
+    document.getElementById('cliente-detalhe-telefone').textContent = cliente.telefone || 'Não informado';
+    document.getElementById('cliente-detalhe-endereco').textContent = cliente.endereco || 'Não informado';
+
+    document.getElementById('cliente-modal-edit-btn').onclick = () => {
+        closeModal('cliente-details-modal');
+        editarCliente(id);
+    };
+
+    document.getElementById('cliente-modal-delete-btn').onclick = () => iniciarExclusaoCliente(id);
+    
+    openModal('cliente-details-modal');
+}
+
 
 function editarCliente(id) {
     const cliente = clientes.find(c => c.id === id);
@@ -424,19 +455,28 @@ function editarCliente(id) {
         document.getElementById('cliente-cpf-cnpj').value = cliente.cpfCnpj;
         document.getElementById('cliente-telefone').value = cliente.telefone;
         document.getElementById('cliente-endereco').value = cliente.endereco;
-        showSection('clientes');
-        document.querySelector('#nav-clientes').click();
+        
+        // Foca no formulário
         document.getElementById('cliente-nome').focus();
+        window.scrollTo(0, 0); // Rola a página para o topo
     }
 }
 
+function iniciarExclusaoCliente(id) {
+    closeModal('cliente-details-modal');
+    const modal = document.getElementById('swipe-confirm-modal');
+    // Limpa outros IDs para garantir que apenas o ID do cliente seja processado
+    delete modal.dataset.orcamentoId;
+    modal.dataset.clienteId = id;
+    modal.classList.add('active');
+}
+
+
 function excluirCliente(id) {
-    if (confirm('Tem certeza que deseja excluir este cliente?')) {
-        clientes = clientes.filter(c => c.id !== id);
-        saveData(); 
-        renderizarClientes();
-        alert('Cliente excluído com sucesso!');
-    }
+    clientes = clientes.filter(c => c.id !== id);
+    saveData(); 
+    renderizarClientes();
+    alert('Cliente excluído com sucesso!');
 }
 
 // Produtos (sem alterações)
@@ -856,6 +896,8 @@ function salvarAlteracoesOrcamentoPeloModal() {
 
 function iniciarExclusaoOrcamento(id) {
     const modal = document.getElementById('swipe-confirm-modal');
+    // Limpa outros IDs para garantir que apenas o ID do orçamento seja processado
+    delete modal.dataset.clienteId;
     modal.dataset.orcamentoId = id;
     modal.classList.add('active');
 }
@@ -873,7 +915,8 @@ function configurarSwipeParaExcluir() {
         container.classList.remove('confirmed');
     };
 
-    const onDragStart = () => {
+    const onDragStart = (e) => {
+        e.preventDefault();
         isDragging = true;
         handle.style.transition = 'none';
     };
@@ -903,7 +946,12 @@ function configurarSwipeParaExcluir() {
             handle.style.left = `${maxLeft}px`;
             container.classList.add('confirmed');
             setTimeout(() => {
-                excluirOrcamentoSalvo(modal.dataset.orcamentoId);
+                // LÓGICA DE EXCLUSÃO GENÉRICA
+                if (modal.dataset.orcamentoId) {
+                    excluirOrcamentoSalvo(modal.dataset.orcamentoId);
+                } else if (modal.dataset.clienteId) {
+                    excluirCliente(modal.dataset.clienteId);
+                }
                 closeModal('swipe-confirm-modal');
                 resetSwipe();
             }, 300);
@@ -1350,6 +1398,13 @@ function excluirBoleto(id, isParcelado) {
 
 
 // Funções de Modal
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('active');
+    }
+}
+
 function openItemModal(itemIndex = -1, source = 'current') {
     const modal = document.getElementById('itemModal');
     modal.dataset.source = source;
