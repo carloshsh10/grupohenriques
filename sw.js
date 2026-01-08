@@ -1,65 +1,76 @@
-// Alterei o nome para v3 para forçar a atualização nos celulares dos usuários
+// Define o nome do cache e os arquivos que serão armazenados
+// Atualizei a versão para v3 para forçar a atualização imediata no celular
 const CACHE_NAME = 'gh-orcamentos-cache-v3';
 
 const urlsToCache = [
-    './',
-    './Index.html',
+    './',                // Mudado de '/' para './' (Pasta atual)
+    './index.html',      // Mudado de 'Index.html' para './index.html' (Minúsculo e relativo)
     './style.css',
     './script.js',
     './pdf-generator.js',
     './backup.js',
-    './assets/logo.png', // Certifique-se que esta pasta existe
-    './assets/icone.png',
+    './assets/logo.png',
+    './assets/icone.png', 
+    // Certifique-se que o favicon existe ou remova a linha abaixo se der erro 404 nele
+    // './assets/favicon.ico', 
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css',
-    'https://cdn.jsdelivr.net/npm/chart.js', // Adicionei o Chart.js ao cache
+    'https://cdn.jsdelivr.net/npm/chart.js',
     'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js'
 ];
 
+// Evento 'install': Salva os arquivos essenciais no cache
 self.addEventListener('install', event => {
-    self.skipWaiting(); // Força o novo Service Worker a assumir imediatamente
+    // Força o SW a ativar imediatamente
+    self.skipWaiting();
+    
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('Cache v3 aberto.');
+                console.log('Cache v3 aberto. Adicionando arquivos.');
                 return cache.addAll(urlsToCache);
             })
     );
 });
 
+// Evento 'fetch': Intercepta as requisições
 self.addEventListener('fetch', event => {
-    // Não cachear requisições do Firebase (Firestore/Auth)
+    // Ignora requisições do Firebase/Google para não quebrar a autenticação
     if (event.request.url.includes('firestore.googleapis.com') || 
+        event.request.url.includes('googleapis.com') || 
         event.request.url.includes('auth')) {
         return; 
     }
 
     event.respondWith(
         caches.match(event.request)
-            .then(response => {
-                if (response) {
-                    return response;
+            .then(cachedResponse => {
+                if (cachedResponse) {
+                    return cachedResponse;
                 }
                 return fetch(event.request).then(
-                    (response) => {
-                        if(!response || response.status !== 200 || response.type !== 'basic') {
-                            return response;
+                    networkResponse => {
+                        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+                            return networkResponse;
                         }
-                        const responseToCache = response.clone();
+                        const responseToCache = networkResponse.clone();
                         caches.open(CACHE_NAME)
-                            .then((cache) => {
-                                // Não cachear backups JSON
+                            .then(cache => {
+                                // Não cachear arquivos JSON de backup
                                 if (!event.request.url.endsWith('.json')) {
-                                    cache.put(event.request, responseToCache);
+                                     cache.put(event.request, responseToCache);
                                 }
                             });
-                        return response;
+                        return networkResponse;
                     }
-                );
+                ).catch(error => {
+                    console.log('Fetch falhou (Offline):', error);
+                });
             })
     );
 });
 
+// Evento 'activate': Limpa caches antigos
 self.addEventListener('activate', event => {
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
