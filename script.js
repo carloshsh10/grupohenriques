@@ -1,11 +1,8 @@
-// =======================================================
-// ========= VARIÁVEIS GLOBAIS ===========================
-// =======================================================
+// Variáveis globais
 let clientes = [];
 let produtos = [];
 let orcamentos = [];
-let contratos = []; 
-let transacoes = []; 
+let boletos = []; // NOVA VARIÁVEL GLOBAL
 let proximoOrcamentoId = 1;
 
 let currentOrcamento = {
@@ -16,13 +13,14 @@ let currentOrcamento = {
     relatorio: "",
     formasPagamento: "",
     servicos: "",
+    faturamentoData: null
 };
 let isEditingItem = false;
 let editingItemIndex = -1;
 
-// Variáveis para o Financeiro
-let financeiroChartInstance = null;
-let currentFinanceiroDate = new Date();
+// Variáveis para o calendário de boletos
+let currentCalendarDate = new Date();
+
 
 // Firebase variables
 let firebaseUser = null;
@@ -30,16 +28,11 @@ const firebaseStatusElement = document.getElementById('firebase-status');
 const firebaseCloudStatusElement = document.getElementById('firebase-cloud-status');
 
 
-// =======================================================
-// ========= INICIALIZAÇÃO ===============================
-// =======================================================
+// Inicialização do aplicativo
 document.addEventListener('DOMContentLoaded', function() {
     configurarEventListeners();
     setupFirebaseAuthStateListener();
-    
-    // Inicializar
     showSection('clientes');
-    preencherSelectsDataFinanceiro();
     
     const currentYearSpan = document.getElementById('current-year');
     if (currentYearSpan) {
@@ -48,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function configurarEventListeners() {
-    // Navegação Principal
+    // Navegação
     document.querySelectorAll('nav a[id^="nav-"]').forEach(navItem => {
         navItem.addEventListener('click', function(e) {
             e.preventDefault();
@@ -59,36 +52,30 @@ function configurarEventListeners() {
         });
     });
 
-    // Aba Clientes
+    document.getElementById('nav-clientes').classList.add('active');
+
+    // Formulários com Salvamento e Limpeza
     document.getElementById('cliente-form').addEventListener('submit', (e) => {
         e.preventDefault();
-        salvarENovoCliente();
+        salvarE䡊ovoCliente();
     });
-    document.querySelector('#cliente-details-modal .close-modal').addEventListener('click', () => closeModal('cliente-details-modal'));
-
-    // Aba Produtos
     document.getElementById('produto-form').addEventListener('submit', (e) => {
         e.preventDefault();
-        salvarENovoProduto();
+        salvarE䡊ovoProduto();
     });
-    document.getElementById('close-produtos-categoria-modal').addEventListener('click', closeProdutosCategoriaModal);
-
-    // Aba Orçamentos
+    
+    // Orçamento
     document.getElementById('orcamento-form').addEventListener('input', salvarDadosOrcamento);
     document.getElementById('adicionar-item-btn').addEventListener('click', () => openItemModal(-1, 'current'));
-    
-    // Botão Gerar PDF do formulário (Força download = false no preview)
     document.getElementById('gerar-pdf-btn').addEventListener('click', () => gerarPDF(false));
+    document.getElementById('salvar-novo-orcamento-btn').addEventListener('click', salvarE䡊ovoOrcamento);
     
-    document.getElementById('salvar-novo-orcamento-btn').addEventListener('click', salvarENovoOrcamento);
-    
-    // Modal Item Orçamento
+    // Modal de Item do Orçamento
     document.getElementById('item-form').addEventListener('submit', adicionarOuEditarItemOrcamento);
     document.querySelector('#itemModal .close-modal').addEventListener('click', () => closeModal('itemModal'));
     document.getElementById('modal-item-categoria').addEventListener('change', carregarProdutosNoModalPorCategoria);
     document.getElementById('delete-item-btn').addEventListener('click', excluirItemPeloModal);
 
-    // Lógica de valor automático no modal de item
     const selectModalProduto = document.getElementById('modal-produto');
     selectModalProduto.addEventListener('change', function() {
         const selectedOption = selectModalProduto.options[selectModalProduto.selectedIndex];
@@ -100,48 +87,48 @@ function configurarEventListeners() {
         }
     });
 
-    // Modal Edição Orçamento
-    document.getElementById('close-edit-orcamento-modal').addEventListener('click', () => closeModal('editOrcamentoModal'));
-    document.getElementById('save-orcamento-changes-btn').addEventListener('click', salvarAlteracoesOrcamentoPeloModal);
-    document.getElementById('add-item-to-edited-orcamento-btn').addEventListener('click', () => openItemModal(-1, 'edit'));
-
-    // Aba Contratos
-    document.getElementById('novo-contrato-btn').addEventListener('click', () => openNovoContratoModal());
-    document.querySelector('#novoContratoModal .close-modal').addEventListener('click', () => closeModal('novoContratoModal'));
-    document.getElementById('salvar-contrato-btn').addEventListener('click', salvarContrato);
-    document.getElementById('exportar-contratos-pdf-btn').addEventListener('click', exportarContratosPDF);
-
-    // Aba Financeiro
-    document.getElementById('nova-receita-btn').addEventListener('click', () => openNovaTransacaoModal('receita'));
-    document.getElementById('nova-despesa-btn').addEventListener('click', () => openNovaTransacaoModal('despesa'));
-    document.querySelector('#novaTransacaoModal .close-modal').addEventListener('click', () => closeModal('novaTransacaoModal'));
-    document.getElementById('salvar-transacao-btn').addEventListener('click', salvarTransacao);
-    document.getElementById('filtrar-financeiro-btn').addEventListener('click', atualizarDashboardFinanceiro);
-    document.getElementById('exportar-financeiro-btn').addEventListener('click', exportarRelatorioFinanceiroPDF);
+    // Modal de Produtos por Categoria
+    document.getElementById('close-produtos-categoria-modal').addEventListener('click', closeProdutosCategoriaModal);
     
-    // NOVA FUNCIONALIDADE: Transferência
-    document.getElementById('nova-transferencia-btn').addEventListener('click', () => openModal('novaTransferenciaModal'));
-    document.querySelector('#novaTransferenciaModal .close-modal').addEventListener('click', () => closeModal('novaTransferenciaModal'));
-    document.getElementById('salvar-transferencia-btn').addEventListener('click', salvarTransferencia);
+    // Faturamento
+    document.getElementById('add-parcela-btn').addEventListener('click', adicionarParcela);
+    document.getElementById('salvar-novo-faturamento-btn').addEventListener('click', salvarE䡊ovoFaturamento);
+    document.getElementById('faturamento-orcamento-vinculado').addEventListener('change', preencherClienteFaturamento);
 
-    // Listener dinâmico financeiro (Contrato Select)
-    document.getElementById('transacao-categoria').addEventListener('change', function() {
-        const isContrato = this.value === 'contrato';
-        document.getElementById('group-contrato-select').style.display = isContrato ? 'block' : 'none';
-    });
-
-    // Firebase Auth
+    // Firebase Login/Logout
     document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
     document.getElementById('google-logout-btn').addEventListener('click', signOutGoogle);
 
-    // Swipe Delete
+    // Modal de edição de orçamento
+    document.getElementById('close-edit-orcamento-modal').addEventListener('click', () => closeModal('editOrcamentoModal'));
+    document.getElementById('save-orcamento-changes-btn').addEventListener('click', salvarAlteracoesOrcamentoPeloModal);
+    document.getElementById('add-item-to-edited-orcamento-btn').addEventListener('click', () => openItemModal(-1, 'edit'));
+    
+    // Modal de confirmação de exclusão (swipe)
     configurarSwipeParaExcluir();
+
+    // ========= NOVOS EVENT LISTENERS PARA BOLETOS =========
+    document.getElementById('prev-month-btn').addEventListener('click', () => changeMonth(-1));
+    document.getElementById('next-month-btn').addEventListener('click', () => changeMonth(1));
+    document.getElementById('boleto-cliente-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        salvarBoleto('cliente');
+    });
+    document.getElementById('boleto-fornecedor-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        salvarBoleto('fornecedor');
+    });
+    document.getElementById('alert-icon-container').addEventListener('click', openUpcomingBoletosModal);
+    document.querySelector('#upcoming-boletos-modal .close-modal').addEventListener('click', () => closeModal('upcoming-boletos-modal'));
+    document.querySelector('#day-details-modal .close-modal').addEventListener('click', () => closeModal('day-details-modal'));
+    
+    // ========= NOVO EVENT LISTENER PARA MODAL DE CLIENTE =========
+    document.querySelector('#cliente-details-modal .close-modal').addEventListener('click', () => closeModal('cliente-details-modal'));
+
 }
 
-// =======================================================
-// ========= FIREBASE & DATA HANDLING ====================
-// =======================================================
 
+// Funções Firebase (sem alterações)
 async function signInWithGoogle() {
     try {
         const provider = new window.GoogleAuthProvider();
@@ -171,20 +158,24 @@ function setupFirebaseAuthStateListener() {
         if (user) {
             firebaseUser = user;
             updateFirebaseStatus('Conectado', 'green');
+            
             loginBtn.style.display = 'none';
             logoutBtn.style.display = 'inline-block';
             logoutBtn.style.backgroundColor = 'green';
             logoutBtn.style.borderColor = 'darkgreen';
             logoutBtn.innerHTML = '<i class="fas fa-check-circle"></i> LOGADO COM FIREBASE CLOUD';
+
             await loadDataFromFirestore();
         } else {
             firebaseUser = null;
             updateFirebaseStatus('Desconectado', 'red');
+
             loginBtn.style.display = 'inline-block';
             logoutBtn.style.display = 'none';
             loginBtn.style.backgroundColor = 'red';
             loginBtn.style.borderColor = 'darkred';
             loginBtn.innerHTML = '<i class="fab fa-google"></i> LOGIN GOOGLE NECESSÁRIO';
+            
             loadDataFromLocalStorage();
         }
     });
@@ -196,8 +187,7 @@ async function saveDataToFirestore() {
         salvarNoLocalStorage('clientes', clientes);
         salvarNoLocalStorage('produtos', produtos);
         salvarNoLocalStorage('orcamentos', orcamentos);
-        salvarNoLocalStorage('contratos', contratos);
-        salvarNoLocalStorage('transacoes', transacoes);
+        salvarNoLocalStorage('boletos', boletos); // SALVAR BOLETOS
         salvarNoLocalStorage('proximoOrcamentoId', proximoOrcamentoId);
         salvarNoLocalStorage('currentOrcamento', currentOrcamento);
         return;
@@ -210,8 +200,7 @@ async function saveDataToFirestore() {
             clientes: clientes,
             produtos: produtos,
             orcamentos: orcamentos,
-            contratos: contratos,
-            transacoes: transacoes,
+            boletos: boletos, // SALVAR BOLETOS
             proximoOrcamentoId: proximoOrcamentoId,
             currentOrcamento: currentOrcamento
         });
@@ -225,6 +214,7 @@ async function saveDataToFirestore() {
 
 async function loadDataFromFirestore() {
     if (!firebaseUser) {
+        console.warn("Usuário não autenticado. Carregando dados do Local Storage.");
         loadDataFromLocalStorage();
         return;
     }
@@ -239,75 +229,46 @@ async function loadDataFromFirestore() {
             clientes = data.clientes || [];
             produtos = data.produtos || [];
             orcamentos = data.orcamentos || [];
-            contratos = data.contratos || [];
-            transacoes = data.transacoes || [];
+            boletos = data.boletos || []; // CARREGAR BOLETOS
             proximoOrcamentoId = data.proximoOrcamentoId || 1;
-            currentOrcamento = data.currentOrcamento || { id: generateSequentialId(true), clienteId: null, itens: [], maoDeObra: 0, relatorio: "", formasPagamento: "", servicos: "" };
+            currentOrcamento = data.currentOrcamento || {
+                id: generateSequentialId(true),
+                clienteId: null,
+                itens: [],
+                maoDeObra: 0,
+                relatorio: "",
+                formasPagamento: "",
+                servicos: "",
+                faturamentoData: null
+            };
             updateFirebaseStatus('Conectado', 'green');
         } else {
             updateFirebaseStatus('Nenhum dado na nuvem', 'blue');
-            resetData();
+            // Resetar todos os dados se não houver nada na nuvem
+            clientes = [];
+            produtos = [];
+            orcamentos = [];
+            boletos = [];
+            proximoOrcamentoId = 1;
+            currentOrcamento = {
+                id: generateSequentialId(true),
+                clienteId: null,
+                itens: [],
+                maoDeObra: 0,
+                relatorio: "",
+                formasPagamento: "",
+                servicos: ""
+            };
         }
         carregarDadosIniciais(); 
     } catch (error) {
         console.error("Erro ao carregar dados do Firestore: ", error);
         updateFirebaseStatus('Erro de Conexão', 'red');
         alert("Erro ao carregar dados do Firebase. Carregando dados locais. " + error.message);
-        loadDataFromLocalStorage(); 
+        loadDataFromLocalStorage(); // Fallback
     }
 }
 
-function salvarNoLocalStorage(key, data) {
-    localStorage.setItem(key, JSON.stringify(data));
-}
-
-function loadDataFromLocalStorage() {
-    clientes = JSON.parse(localStorage.getItem('clientes')) || [];
-    produtos = JSON.parse(localStorage.getItem('produtos')) || [];
-    orcamentos = JSON.parse(localStorage.getItem('orcamentos')) || [];
-    contratos = JSON.parse(localStorage.getItem('contratos')) || [];
-    transacoes = JSON.parse(localStorage.getItem('transacoes')) || [];
-    proximoOrcamentoId = parseInt(localStorage.getItem('proximoOrcamentoId')) || 1;
-    currentOrcamento = JSON.parse(localStorage.getItem('currentOrcamento')) || {
-        id: generateSequentialId(true),
-        clienteId: null, itens: [], maoDeObra: 0, relatorio: "", formasPagamento: "", servicos: "",
-    };
-    
-    carregarDadosIniciais();
-}
-
-function resetData() {
-    clientes = []; produtos = []; orcamentos = []; contratos = []; transacoes = [];
-    proximoOrcamentoId = 1;
-    currentOrcamento = { id: generateSequentialId(true), clienteId: null, itens: [], maoDeObra: 0, relatorio: "", formasPagamento: "", servicos: "" };
-}
-
-function saveData() {
-    if (firebaseUser) {
-        saveDataToFirestore();
-    } else {
-        salvarNoLocalStorage('clientes', clientes);
-        salvarNoLocalStorage('produtos', produtos);
-        salvarNoLocalStorage('orcamentos', orcamentos);
-        salvarNoLocalStorage('contratos', contratos);
-        salvarNoLocalStorage('transacoes', transacoes);
-        salvarNoLocalStorage('proximoOrcamentoId', proximoOrcamentoId);
-        salvarNoLocalStorage('currentOrcamento', currentOrcamento);
-        updateFirebaseStatus('Salvo Localmente. Conecte-se para salvar na nuvem.', 'blue');
-    }
-}
-
-function carregarDadosIniciais() {
-    renderizarClientes();
-    renderizarProdutosPorCategoria();
-    carregarOrcamentoAtual();
-    renderizarOrcamentosSalvos();
-    
-    renderizarContratos();
-    verificarAlertasReajuste();
-    gerarDespesasRecorrentesAutomaticas();
-    atualizarDashboardFinanceiro();
-}
 
 function updateFirebaseStatus(message, color) {
     if(firebaseStatusElement) {
@@ -320,32 +281,67 @@ function updateFirebaseStatus(message, color) {
     }
 }
 
-// =======================================================
-// ========= LÓGICA DE UI E NAVEGAÇÃO ====================
-// =======================================================
+function salvarNoLocalStorage(key, data) {
+    localStorage.setItem(key, JSON.stringify(data));
+}
+
+function loadDataFromLocalStorage() {
+    clientes = JSON.parse(localStorage.getItem('clientes')) || [];
+    produtos = JSON.parse(localStorage.getItem('produtos')) || [];
+    orcamentos = JSON.parse(localStorage.getItem('orcamentos')) || [];
+    boletos = JSON.parse(localStorage.getItem('boletos')) || []; // CARREGAR BOLETOS
+    proximoOrcamentoId = parseInt(localStorage.getItem('proximoOrcamentoId')) || 1;
+    currentOrcamento = JSON.parse(localStorage.getItem('currentOrcamento')) || {
+        id: generateSequentialId(true),
+        clienteId: null,
+        itens: [],
+        maoDeObra: 0,
+        relatorio: "",
+        formasPagamento: "",
+        servicos: "",
+        faturamentoData: null
+    };
+    
+    carregarDadosIniciais();
+}
+
+function saveData() {
+    if (firebaseUser) {
+        saveDataToFirestore();
+    } else {
+        salvarNoLocalStorage('clientes', clientes);
+        salvarNoLocalStorage('produtos', produtos);
+        salvarNoLocalStorage('orcamentos', orcamentos);
+        salvarNoLocalStorage('boletos', boletos); // SALVAR BOLETOS
+        salvarNoLocalStorage('proximoOrcamentoId', proximoOrcamentoId);
+        salvarNoLocalStorage('currentOrcamento', currentOrcamento);
+        updateFirebaseStatus('Salvo Localmente. Conecte-se para salvar na nuvem.', 'blue');
+    }
+}
+
+function carregarDadosIniciais() {
+    renderizarClientes();
+    renderizarProdutosPorCategoria();
+    carregarOrcamentoAtual();
+    renderizarOrcamentosSalvos();
+    renderizarFaturamentosGerados();
+    renderCalendar(); // RENDERIZAR CALENDÁRIO
+    checkForUpcomingBoletos(); // CHECAR ALERTAS
+}
 
 function showSection(sectionId) {
     document.querySelectorAll('main > section').forEach(section => {
         section.classList.remove('active');
     });
-    const section = document.getElementById(sectionId + '-section');
-    if(section) section.classList.add('active');
+    document.getElementById(sectionId + '-section').classList.add('active');
 
     if (sectionId === 'orcamentos') carregarClientesNoSelect('orcamento-cliente');
+    if (sectionId === 'faturamento') carregarOrcamentosNoSelect('faturamento-orcamento-vinculado');
     if (sectionId === 'produtos') renderizarProdutosPorCategoria();
-    
-    // Novas Abas
-    if (sectionId === 'contratos') {
-        renderizarContratos();
-        verificarAlertasReajuste();
-    }
-    if (sectionId === 'financeiro') {
-        atualizarDashboardFinanceiro();
-        if(financeiroChartInstance) financeiroChartInstance.resize();
-    }
+    if (sectionId === 'boletos') renderCalendar();
 }
 
-// Utils
+// Funções Auxiliares
 function generateAlphanumericUniqueId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
@@ -364,9 +360,7 @@ function formatarMoeda(valor) {
     return 'R$ ' + parseFloat(valor).toFixed(2).replace('.', ',');
 }
 
-// =======================================================
-// ========= CLIENTES ====================================
-// =======================================================
+// ========= FUNÇÕES DE CLIENTES (MODIFICADAS) =========
 
 function salvarCliente() {
     const id = document.getElementById('cliente-id').value;
@@ -375,15 +369,22 @@ function salvarCliente() {
     const telefone = document.getElementById('cliente-telefone').value.trim();
     const endereco = document.getElementById('cliente-endereco').value.trim();
 
-    if (!nome) { alert('O nome do cliente é obrigatório.'); return false; }
+    if (!nome) {
+        alert('O nome do cliente é obrigatório.');
+        return false;
+    }
 
     if (id) {
         const index = clientes.findIndex(c => c.id === id);
-        if (index !== -1) clientes[index] = { id, nome, cpfCnpj, telefone, endereco };
+        if (index !== -1) {
+            clientes[index] = { id, nome, cpfCnpj, telefone, endereco };
+            alert('Cliente atualizado com sucesso!');
+        }
     } else {
         const novoCliente = { id: generateAlphanumericUniqueId(), nome, cpfCnpj, telefone, endereco };
         clientes.push(novoCliente);
         document.getElementById('cliente-id').value = novoCliente.id;
+        alert('Cliente adicionado com sucesso!');
     }
     saveData();
     renderizarClientes();
@@ -395,8 +396,10 @@ function novoCliente() {
     document.getElementById('cliente-id').value = '';
 }
 
-function salvarENovoCliente() {
-    if (salvarCliente()) { novoCliente(); alert('Cliente salvo!'); }
+function salvarE䡊ovoCliente() {
+    if (salvarCliente()) {
+        novoCliente();
+    }
 }
 
 function renderizarClientes() {
@@ -439,8 +442,10 @@ function abrirModalDetalhesCliente(id) {
     };
 
     document.getElementById('cliente-modal-delete-btn').onclick = () => iniciarExclusaoCliente(id);
+    
     openModal('cliente-details-modal');
 }
+
 
 function editarCliente(id) {
     const cliente = clientes.find(c => c.id === id);
@@ -450,18 +455,22 @@ function editarCliente(id) {
         document.getElementById('cliente-cpf-cnpj').value = cliente.cpfCnpj;
         document.getElementById('cliente-telefone').value = cliente.telefone;
         document.getElementById('cliente-endereco').value = cliente.endereco;
+        
+        // Foca no formulário
         document.getElementById('cliente-nome').focus();
-        window.scrollTo(0, 0);
+        window.scrollTo(0, 0); // Rola a página para o topo
     }
 }
 
 function iniciarExclusaoCliente(id) {
     closeModal('cliente-details-modal');
     const modal = document.getElementById('swipe-confirm-modal');
+    // Limpa outros IDs para garantir que apenas o ID do cliente seja processado
     delete modal.dataset.orcamentoId;
     modal.dataset.clienteId = id;
     modal.classList.add('active');
 }
+
 
 function excluirCliente(id) {
     clientes = clientes.filter(c => c.id !== id);
@@ -470,10 +479,7 @@ function excluirCliente(id) {
     alert('Cliente excluído com sucesso!');
 }
 
-// =======================================================
-// ========= PRODUTOS ====================================
-// =======================================================
-
+// Produtos (sem alterações)
 function salvarProduto() {
     const id = document.getElementById('produto-id').value;
     const nomeProposta = document.getElementById('produto-nome-proposta').value.trim();
@@ -481,19 +487,35 @@ function salvarProduto() {
     const categoriaInput = document.getElementById('produto-categoria').value.trim();
     const valorInput = document.getElementById('produto-valor').value;
 
-    if (!nomeProposta) { alert('O "Nome para Proposta" é obrigatório.'); return false; }
+    if (!nomeProposta) {
+        alert('O "Nome para Proposta" é obrigatório.');
+        return false;
+    }
     const valor = parseFloat(valorInput);
-    if (isNaN(valor) || valor < 0) { alert('Valor inválido.'); return false; }
+    if (isNaN(valor) || valor < 0) {
+        alert('O valor do produto deve ser um número válido.');
+        return false;
+    }
 
     const categoria = categoriaInput || 'Geral';
-    const produtoData = { id: id || generateAlphanumericUniqueId(), nomeProposta, nomeReal: nomeReal || nomeProposta, categoria, valor };
+    const produtoData = {
+        id: id || generateAlphanumericUniqueId(),
+        nomeProposta,
+        nomeReal: nomeReal || nomeProposta,
+        categoria: categoria,
+        valor
+    };
 
     if (id) {
         const index = produtos.findIndex(p => p.id === id);
-        if (index !== -1) produtos[index] = produtoData;
+        if (index !== -1) {
+            produtos[index] = produtoData;
+            alert('Produto atualizado!');
+        }
     } else {
         produtos.push(produtoData);
         document.getElementById('produto-id').value = produtoData.id;
+        alert('Produto adicionado!');
     }
     
     saveData(); 
@@ -506,8 +528,10 @@ function novoProduto() {
     document.getElementById('produto-id').value = '';
 }
 
-function salvarENovoProduto() {
-    if (salvarProduto()) { novoProduto(); alert('Produto salvo!'); }
+function salvarE䡊ovoProduto() {
+    if (salvarProduto()) {
+        novoProduto();
+    }
 }
 
 function renderizarProdutosPorCategoria() {
@@ -598,13 +622,9 @@ function excluirProduto(id, categoriaAberta = null) {
     }
 }
 
-// =======================================================
-// ========= ORÇAMENTOS ==================================
-// =======================================================
-
+// Orçamentos
 function carregarClientesNoSelect(selectId) {
     const select = document.getElementById(selectId);
-    if (!select) return;
     const clienteSelecionado = select.value;
     select.innerHTML = '<option value="">Selecione um cliente...</option>';
     clientes.forEach(c => {
@@ -613,6 +633,15 @@ function carregarClientesNoSelect(selectId) {
     if (clientes.find(c => c.id === clienteSelecionado)) {
         select.value = clienteSelecionado;
     }
+}
+
+function carregarOrcamentosNoSelect(selectId) {
+    const select = document.getElementById(selectId);
+    select.innerHTML = '<option value="">Selecione um orçamento...</option>';
+    orcamentos.forEach(orc => {
+        const cliente = clientes.find(c => c.id === orc.clienteId);
+        select.innerHTML += `<option value="${orc.id}">Nº ${orc.id} - ${cliente ? cliente.nome : 'Cliente desconhecido'}</option>`;
+    });
 }
 
 function salvarDadosOrcamento() {
@@ -637,6 +666,7 @@ function adicionarOuEditarItemOrcamento(event) {
     if (isNaN(valor) || valor < 0) { alert('Valor inválido.'); return; }
 
     const newItem = { produtoId, produtoNome: produto.nomeProposta, quantidade, valor };
+    
     const modal = document.getElementById('itemModal');
     const source = modal.dataset.source;
 
@@ -687,6 +717,7 @@ function excluirItemPeloModal() {
         closeModal('itemModal');
     }
 }
+
 
 function renderizarItensOrcamento() {
     const tbody = document.querySelector('#orcamento-itens-tabela tbody');
@@ -745,25 +776,28 @@ function salvarOrcamentoAtual() {
     }
     saveData();
     renderizarOrcamentosSalvos();
+    alert(`Orçamento ${currentOrcamento.id} salvo com sucesso!`);
     return true;
 }
 
 function novoOrcamento() {
     currentOrcamento = {
         id: generateSequentialId(),
-        clienteId: null, itens: [], maoDeObra: 0, relatorio: "", formasPagamento: "", servicos: "",
+        clienteId: null, itens: [], maoDeObra: 0, relatorio: "", formasPagamento: "", servicos: "", faturamentoData: null
     };
     saveData();
     carregarOrcamentoAtual();
+    alert('Novo orçamento iniciado com ID: ' + currentOrcamento.id);
 }
 
-function salvarENovoOrcamento() {
+function salvarE䡊ovoOrcamento() {
     if (salvarOrcamentoAtual()) {
-        if (confirm('Orçamento salvo! Deseja iniciar um novo?')) {
+        if (confirm('Deseja iniciar um novo orçamento?')) {
             novoOrcamento();
         }
     }
 }
+
 
 function renderizarOrcamentosSalvos() {
     const ul = document.getElementById('lista-orcamentos');
@@ -777,35 +811,34 @@ function renderizarOrcamentosSalvos() {
                 <div>
                     <button class="btn-editar" onclick="abrirModalEdicaoOrcamento('${orc.id}')" title="Abrir/Editar"><i class="fas fa-folder-open"></i></button>
                     <button class="btn-excluir" onclick="iniciarExclusaoOrcamento('${orc.id}')" title="Excluir"><i class="fas fa-trash-alt"></i></button>
-                    <button class="btn-preview" onclick="baixarPdfOrcamento('${orc.id}')" title="Baixar PDF"><i class="fas fa-file-pdf"></i></button>
+                    <button class="btn-preview" onclick="previewOrcamento('${orc.id}')" title="Preview Proposta"><i class="fas fa-file-pdf"></i></button>
+                    <button class="btn-faturamento ${orc.faturamentoData ? 'active' : ''}" onclick="visualizarFaturamento('${orc.id}')" title="Ver Faturamento"><i class="fas fa-file-invoice"></i></button>
                 </div>
             </li>
         `;
     });
 }
 
-function baixarPdfOrcamento(id) {
-    const orc = orcamentos.find(o => o.id === id);
-    if(orc) {
-        gerarPDF(false, orc); 
-    }
-}
-
 function abrirModalEdicaoOrcamento(id) {
     const orc = orcamentos.find(o => o.id === id);
-    if (!orc) return;
+    if (!orc) {
+        alert('Orçamento não encontrado!');
+        return;
+    }
 
     document.getElementById('edit-orcamento-id').value = orc.id;
     document.getElementById('edit-orcamento-modal-title').textContent = `Editar Orçamento Nº ${orc.id}`;
     
     carregarClientesNoSelect('edit-orcamento-cliente');
     document.getElementById('edit-orcamento-cliente').value = orc.clienteId;
+
     document.getElementById('edit-orcamento-servicos').value = orc.servicos || '';
     document.getElementById('edit-orcamento-mao-de-obra').value = orc.maoDeObra > 0 ? orc.maoDeObra.toFixed(2) : '';
     document.getElementById('edit-orcamento-relatorio').value = orc.relatorio || '';
     document.getElementById('edit-orcamento-formas-pagamento').value = orc.formasPagamento || '';
 
     renderizarItensOrcamentoModalEdicao(orc);
+    
     document.getElementById('editOrcamentoModal').classList.add('active');
 }
 
@@ -838,11 +871,15 @@ function calcularTotaisOrcamentoModalEdicao(orc) {
     document.getElementById('edit-total-geral').textContent = formatarMoeda(totalGeral);
 }
 
+
 function salvarAlteracoesOrcamentoPeloModal() {
     const orcamentoId = document.getElementById('edit-orcamento-id').value;
     const orcIndex = orcamentos.findIndex(o => o.id === orcamentoId);
 
-    if (orcIndex === -1) return;
+    if (orcIndex === -1) {
+        alert('Erro: Orçamento não encontrado para salvar.');
+        return;
+    }
 
     orcamentos[orcIndex].clienteId = document.getElementById('edit-orcamento-cliente').value;
     orcamentos[orcIndex].servicos = document.getElementById('edit-orcamento-servicos').value;
@@ -850,88 +887,19 @@ function salvarAlteracoesOrcamentoPeloModal() {
     orcamentos[orcIndex].relatorio = document.getElementById('edit-orcamento-relatorio').value;
     orcamentos[orcIndex].formasPagamento = document.getElementById('edit-orcamento-formas-pagamento').value;
     
-    if(confirm("Gostaria de atualizar a data de emissão para hoje?")) {
-        orcamentos[orcIndex].data = new Date().toISOString();
-    }
-    
     saveData();
     renderizarOrcamentosSalvos();
     closeModal('editOrcamentoModal');
-    alert('Orçamento atualizado!');
+    alert('Orçamento atualizado com sucesso!');
 }
+
 
 function iniciarExclusaoOrcamento(id) {
     const modal = document.getElementById('swipe-confirm-modal');
+    // Limpa outros IDs para garantir que apenas o ID do orçamento seja processado
     delete modal.dataset.clienteId;
     modal.dataset.orcamentoId = id;
     modal.classList.add('active');
-}
-
-function excluirOrcamentoSalvo(id) {
-    orcamentos = orcamentos.filter(o => o.id !== id);
-    saveData();
-    renderizarOrcamentosSalvos();
-    if (currentOrcamento.id === id) { novoOrcamento(); }
-    alert('Orçamento excluído!');
-}
-
-// =======================================================
-// ========= SWIPE, MODAIS e DIVERSOS ====================
-// =======================================================
-
-function openModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.classList.add('active');
-}
-
-function openItemModal(itemIndex = -1, source = 'current') {
-    const modal = document.getElementById('itemModal');
-    modal.dataset.source = source;
-    document.getElementById('item-form').reset();
-    isEditingItem = itemIndex > -1;
-    editingItemIndex = itemIndex;
-
-    const deleteBtn = document.getElementById('delete-item-btn');
-    carregarCategoriasNoModalItem();
-
-    let orcamentoDeOrigem = source === 'current' ? currentOrcamento : orcamentos.find(o => o.id === document.getElementById('edit-orcamento-id').value);
-
-    if (isEditingItem && orcamentoDeOrigem && orcamentoDeOrigem.itens[itemIndex]) {
-        const item = orcamentoDeOrigem.itens[itemIndex];
-        const produto = produtos.find(p => p.id === item.produtoId);
-        document.getElementById('modal-item-categoria').value = produto ? (produto.categoria || 'Geral') : '';
-        carregarProdutosNoModalPorCategoria();
-        document.getElementById('modal-produto').value = item.produtoId;
-        document.getElementById('modal-quantidade').value = item.quantidade;
-        document.getElementById('modal-valor').value = item.valor.toFixed(2);
-        deleteBtn.style.display = 'inline-block';
-    } else {
-        carregarProdutosNoModalPorCategoria();
-        deleteBtn.style.display = 'none';
-    }
-    modal.classList.add('active');
-}
-
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if(modal) modal.classList.remove('active');
-}
-
-function carregarCategoriasNoModalItem() {
-    const select = document.getElementById('modal-item-categoria');
-    select.innerHTML = '<option value="">Todas as Categorias</option>';
-    const categorias = [...new Set(produtos.map(p => p.categoria || 'Geral'))].sort();
-    categorias.forEach(cat => select.innerHTML += `<option value="${cat}">${cat}</option>`);
-}
-
-function carregarProdutosNoModalPorCategoria() {
-    const categoria = document.getElementById('modal-item-categoria').value;
-    const select = document.getElementById('modal-produto');
-    select.innerHTML = '<option value="">Selecione um produto...</option>';
-    const produtosFiltrados = categoria ? produtos.filter(p => (p.categoria || 'Geral') === categoria) : produtos;
-    produtosFiltrados.forEach(p => {
-        select.innerHTML += `<option value="${p.id}" data-valor="${p.valor}">${p.nomeProposta} (R$ ${p.valor.toFixed(2)})</option>`;
-    });
 }
 
 function configurarSwipeParaExcluir() {
@@ -959,9 +927,12 @@ function configurarSwipeParaExcluir() {
         const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
         const rect = container.getBoundingClientRect();
         let newLeft = clientX - rect.left - (handle.offsetWidth / 2);
+
         if (newLeft < 0) newLeft = 0;
         const maxLeft = container.offsetWidth - handle.offsetWidth;
-        if (newLeft > maxLeft) newLeft = maxLeft;
+        if (newLeft > maxLeft) {
+            newLeft = maxLeft;
+        }
         handle.style.left = `${newLeft}px`;
     };
 
@@ -975,8 +946,12 @@ function configurarSwipeParaExcluir() {
             handle.style.left = `${maxLeft}px`;
             container.classList.add('confirmed');
             setTimeout(() => {
-                if (modal.dataset.orcamentoId) excluirOrcamentoSalvo(modal.dataset.orcamentoId);
-                else if (modal.dataset.clienteId) excluirCliente(modal.dataset.clienteId);
+                // LÓGICA DE EXCLUSÃO GENÉRICA
+                if (modal.dataset.orcamentoId) {
+                    excluirOrcamentoSalvo(modal.dataset.orcamentoId);
+                } else if (modal.dataset.clienteId) {
+                    excluirCliente(modal.dataset.clienteId);
+                }
                 closeModal('swipe-confirm-modal');
                 resetSwipe();
             }, 300);
@@ -988,747 +963,509 @@ function configurarSwipeParaExcluir() {
     handle.addEventListener('mousedown', onDragStart);
     document.addEventListener('mousemove', onDragMove);
     document.addEventListener('mouseup', onDragEnd);
+    
     handle.addEventListener('touchstart', onDragStart);
     document.addEventListener('touchmove', onDragMove, { passive: false });
     document.addEventListener('touchend', onDragEnd);
-    cancelBtn.addEventListener('click', () => { closeModal('swipe-confirm-modal'); resetSwipe(); });
-}
 
-// =======================================================
-// ========= GESTÃO DE CONTRATOS =========================
-// =======================================================
-
-function openNovoContratoModal(contratoId = null) {
-    const form = document.getElementById('novo-contrato-form');
-    form.reset();
-    document.getElementById('contrato-id').value = '';
-    
-    // Carrega clientes
-    const select = document.getElementById('contrato-cliente');
-    select.innerHTML = '<option value="">Selecione um cliente...</option>';
-    clientes.forEach(c => {
-        select.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
+    cancelBtn.addEventListener('click', () => {
+        closeModal('swipe-confirm-modal');
+        resetSwipe();
     });
-
-    if (contratoId) {
-        const contrato = contratos.find(c => c.id === contratoId);
-        if (contrato) {
-            document.getElementById('contrato-id').value = contrato.id;
-            select.value = contrato.clienteId;
-            document.getElementById('contrato-descricao').value = contrato.descricao;
-            document.getElementById('contrato-valor').value = contrato.valor;
-            document.getElementById('contrato-dia-vencimento').value = contrato.diaVencimento;
-            document.getElementById('contrato-mes-reajuste').value = contrato.mesReajuste;
-            document.getElementById('contrato-ativo').checked = contrato.ativo;
-            document.querySelector('#novoContratoModal h3').textContent = 'Editar Contrato';
-        }
-    } else {
-        document.querySelector('#novoContratoModal h3').textContent = 'Novo Contrato';
-    }
-    openModal('novoContratoModal');
 }
 
-function salvarContrato() {
-    const id = document.getElementById('contrato-id').value;
-    const clienteId = document.getElementById('contrato-cliente').value;
-    const descricao = document.getElementById('contrato-descricao').value;
-    const valor = parseFloat(document.getElementById('contrato-valor').value);
-    const diaVencimento = parseInt(document.getElementById('contrato-dia-vencimento').value);
-    const mesReajuste = parseInt(document.getElementById('contrato-mes-reajuste').value);
-    const ativo = document.getElementById('contrato-ativo').checked;
-
-    if (!clienteId || !descricao || isNaN(valor) || isNaN(diaVencimento)) {
-        alert('Preencha todos os campos obrigatórios.');
-        return;
+function excluirOrcamentoSalvo(id) {
+    orcamentos = orcamentos.filter(o => o.id !== id);
+    saveData();
+    renderizarOrcamentosSalvos();
+    renderizarFaturamentosGerados();
+    if (currentOrcamento.id === id) {
+        novoOrcamento();
     }
+    alert('Orçamento excluído permanentemente!');
+}
 
-    const contratoData = {
-        id: id || generateAlphanumericUniqueId(),
-        clienteId,
-        descricao,
-        valor,
-        diaVencimento,
-        mesReajuste,
-        ativo,
-        dataCriacao: id ? (contratos.find(c => c.id === id).dataCriacao) : new Date().toISOString()
+function previewOrcamento(id) {
+    const orc = orcamentos.find(o => o.id === id);
+    if(orc) gerarPDF(true, orc); else alert('Orçamento não encontrado.');
+}
+
+// Faturamento (sem alterações)
+function preencherClienteFaturamento() {
+    const orcamentoId = document.getElementById('faturamento-orcamento-vinculado').value;
+    const nomeClienteInput = document.getElementById('faturamento-cliente-nome');
+    const orc = orcamentos.find(o => o.id === orcamentoId);
+    if(orc) {
+        const cliente = clientes.find(c => c.id === orc.clienteId);
+        nomeClienteInput.value = cliente ? cliente.nome : 'Cliente não encontrado';
+    } else {
+        nomeClienteInput.value = '';
+    }
+}
+
+function adicionarParcela() {
+    const container = document.getElementById('faturamento-parcelas-container');
+    container.innerHTML += `
+        <div class="parcela-row">
+            <div class="form-group"><label>Vencimento:</label><input type="date" class="parcela-data" required></div>
+            <div class="form-group"><label>Valor (R$):</label><input type="number" step="0.01" min="0" class="parcela-valor" required></div>
+            <button type="button" class="btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-trash-alt"></i></button>
+        </div>
+    `;
+}
+
+function gerarEAnexarFaturamento() {
+    const orcamentoId = document.getElementById('faturamento-orcamento-vinculado').value;
+    if (!orcamentoId) { alert('Selecione um orçamento para vincular o faturamento.'); return false; }
+
+    const orcIndex = orcamentos.findIndex(o => o.id === orcamentoId);
+    if (orcIndex === -1) { alert('Orçamento não encontrado.'); return false; }
+
+    const faturamentoData = {
+        clienteId: orcamentos[orcIndex].clienteId,
+        localServico: document.getElementById('faturamento-local').value,
+        tipoServico: document.getElementById('faturamento-tipo-servico').value,
+        valorEntrada: parseFloat(document.getElementById('faturamento-entrada').value) || 0,
+        parcelas: Array.from(document.querySelectorAll('#faturamento-parcelas-container .parcela-row')).map(row => ({
+            data: row.querySelector('.parcela-data').value,
+            valor: parseFloat(row.querySelector('.parcela-valor').value)
+        })).filter(p => p.data && !isNaN(p.valor))
     };
 
-    if (id) {
-        const index = contratos.findIndex(c => c.id === id);
-        if (index !== -1) contratos[index] = contratoData;
-    } else {
-        contratos.push(contratoData);
+    if (!faturamentoData.localServico || !faturamentoData.tipoServico) {
+        alert('Preencha o Local e o Tipo de Serviço.'); return false;
     }
 
+    orcamentos[orcIndex].faturamentoData = faturamentoData;
     saveData();
-    renderizarContratos();
-    verificarAlertasReajuste();
-    closeModal('novoContratoModal');
-    alert('Contrato salvo com sucesso!');
+    gerarFaturamentoPDF(faturamentoData);
+    renderizarOrcamentosSalvos();
+    renderizarFaturamentosGerados();
+    alert('Faturamento gerado e anexado ao orçamento com sucesso!');
+    return true;
 }
 
-function renderizarContratos() {
-    const tbody = document.querySelector('#contratos-tabela tbody');
-    tbody.innerHTML = '';
-
-    if (contratos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center">Nenhum contrato cadastrado.</td></tr>';
-        return;
-    }
-
-    contratos.forEach(c => {
-        const cliente = clientes.find(cli => cli.id === c.clienteId);
-        const nomeCliente = cliente ? cliente.nome : 'Cliente Removido';
-        const nomesMeses = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-        
-        tbody.innerHTML += `
-            <tr style="opacity: ${c.ativo ? 1 : 0.6}">
-                <td>${nomeCliente}</td>
-                <td>${c.descricao}</td>
-                <td>${formatarMoeda(c.valor)}</td>
-                <td>Dia ${c.diaVencimento}</td>
-                <td>${nomesMeses[c.mesReajuste]}</td>
-                <td>${c.ativo ? '<span class="status-badge status-pago">Ativo</span>' : '<span class="status-badge status-pendente">Inativo</span>'}</td>
-                <td>
-                    <button class="btn-editar btn-sm" onclick="openNovoContratoModal('${c.id}')"><i class="fas fa-edit"></i></button>
-                    <button class="btn-excluir btn-sm" onclick="excluirContrato('${c.id}')"><i class="fas fa-trash-alt"></i></button>
-                </td>
-            </tr>
-        `;
-    });
+function novoFaturamento() {
+    document.getElementById('faturamento-form').reset();
+    document.getElementById('faturamento-parcelas-container').innerHTML = '';
+    document.getElementById('faturamento-cliente-nome').value = '';
 }
 
-function excluirContrato(id) {
-    if(confirm("Deseja excluir este contrato?")) {
-        contratos = contratos.filter(c => c.id !== id);
-        saveData();
-        renderizarContratos();
-        verificarAlertasReajuste();
+function salvarE䡊ovoFaturamento() {
+    if (gerarEAnexarFaturamento()) {
+        novoFaturamento();
     }
 }
 
-function verificarAlertasReajuste() {
-    const container = document.getElementById('alertas-reajuste-container');
-    container.innerHTML = '';
-    const mesAtual = new Date().getMonth() + 1; // 1-12
+function visualizarFaturamento(orcamentoId) {
+    const orc = orcamentos.find(o => o.id === orcamentoId);
+    if (orc && orc.faturamentoData) {
+        gerarFaturamentoPDF(orc.faturamentoData, true);
+    } else {
+        alert('Nenhum faturamento encontrado para este orçamento. Gere um na aba "Faturamento".');
+    }
+}
 
-    const contratosReajuste = contratos.filter(c => c.ativo && c.mesReajuste === mesAtual);
+function carregarFaturamentoSalvo(orcamentoId) {
+    const orc = orcamentos.find(o => o.id === orcamentoId);
+    if (orc && orc.faturamentoData) {
+        document.getElementById('faturamento-orcamento-vinculado').value = orcamentoId;
+        preencherClienteFaturamento();
+        document.getElementById('faturamento-local').value = orc.faturamentoData.localServico || '';
+        document.getElementById('faturamento-tipo-servico').value = orc.faturamentoData.tipoServico || '';
+        document.getElementById('faturamento-entrada').value = orc.faturamentoData.valorEntrada > 0 ? orc.faturamentoData.valorEntrada.toFixed(2) : '0';
 
-    if (contratosReajuste.length > 0) {
-        container.style.display = 'block';
-        contratosReajuste.forEach(c => {
-            const cliente = clientes.find(cli => cli.id === c.clienteId);
+        const container = document.getElementById('faturamento-parcelas-container');
+        container.innerHTML = '';
+        orc.faturamentoData.parcelas.forEach(parcela => {
             container.innerHTML += `
-                <div class="alert-box">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <div>
-                        <strong>Atenção Reajuste!</strong><br>
-                        O contrato de <strong>${cliente ? cliente.nome : 'Cliente'}</strong> deve ser reajustado este mês.
-                    </div>
+                <div class="parcela-row">
+                    <div class="form-group"><label>Vencimento:</label><input type="date" class="parcela-data" value="${parcela.data}" required></div>
+                    <div class="form-group"><label>Valor (R$):</label><input type="number" step="0.01" min="0" class="parcela-valor" value="${parcela.valor.toFixed(2)}" required></div>
+                    <button type="button" class="btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-trash-alt"></i></button>
                 </div>
             `;
         });
+        showSection('faturamento');
+        document.querySelector('#nav-faturamento').click();
+        alert(`Faturamento do orçamento ${orcamentoId} carregado para edição.`);
     } else {
-        container.style.display = 'none';
+        alert('Nenhum faturamento encontrado para este orçamento.');
     }
 }
 
-function exportarContratosPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+function excluirFaturamentoSalvo(orcamentoId) {
+    if (confirm('Tem certeza que deseja excluir este faturamento? Esta ação não pode ser desfeita.')) {
+        const orcIndex = orcamentos.findIndex(o => o.id === orcamentoId);
+        if (orcIndex !== -1) {
+            orcamentos[orcIndex].faturamentoData = null;
+            saveData();
+            renderizarOrcamentosSalvos();
+            renderizarFaturamentosGerados();
+            alert('Faturamento excluído com sucesso!');
+        } else {
+            alert('Orçamento não encontrado.');
+        }
+    }
+}
 
-    doc.setFontSize(18);
-    doc.setTextColor(0, 51, 102);
-    doc.text("RELATÓRIO DE CONTRATOS - GRUPO HENRI SISTEMAS", 14, 20);
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 28);
+function renderizarFaturamentosGerados() {
+    const container = document.getElementById('lista-faturamentos-gerados');
+    container.innerHTML = '<ul></ul>';
+    const ul = container.querySelector('ul');
+    const faturamentosList = orcamentos.filter(o => o.faturamentoData);
 
-    const tableColumn = ["Cliente", "Descrição", "Valor", "Vencimento", "Reajuste", "Status"];
-    const tableRows = [];
+    if (faturamentosList.length === 0) {
+        container.innerHTML = '<p>Nenhum faturamento gerado.</p>';
+        return;
+    }
 
-    contratos.forEach(c => {
-        const cliente = clientes.find(cli => cli.id === c.clienteId);
-        const nomesMeses = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-        const rowData = [
-            cliente ? cliente.nome : 'N/A',
-            c.descricao,
-            formatarMoeda(c.valor),
-            `Dia ${c.diaVencimento}`,
-            nomesMeses[c.mesReajuste],
-            c.ativo ? 'Ativo' : 'Inativo'
-        ];
-        tableRows.push(rowData);
+    faturamentosList.forEach(orc => {
+        const cliente = clientes.find(c => c.id === orc.clienteId);
+        ul.innerHTML += `
+            <li class="list-item">
+                <span>Faturamento para: ${cliente ? cliente.nome : 'N/A'} (Ref. Orç. Nº ${orc.id})</span>
+                <div>
+                    <button class="btn-editar" onclick="carregarFaturamentoSalvo('${orc.id}')" title="Abrir"><i class="fas fa-folder-open"></i> Abrir</button>
+                    <button class="btn-preview" onclick="visualizarFaturamento('${orc.id}')"><i class="fas fa-eye"></i> Visualizar</button>
+                    <button class="btn-excluir" onclick="excluirFaturamentoSalvo('${orc.id}')" title="Excluir"><i class="fas fa-trash-alt"></i> Excluir</button>
+                </div>
+            </li>
+        `;
     });
-
-    doc.autoTable({
-        head: [tableColumn],
-        body: tableRows,
-        startY: 35,
-        theme: 'grid',
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [0, 51, 102] }
-    });
-
-    doc.save('Relatorio_Contratos.pdf');
 }
 
 // =======================================================
-// ========= GESTÃO FINANCEIRA ===========================
+// ========= INÍCIO DAS NOVAS FUNÇÕES PARA BOLETOS =========
 // =======================================================
 
-function preencherSelectsDataFinanceiro() {
-    const selectMes = document.getElementById('financeiro-mes');
-    const selectAno = document.getElementById('financeiro-ano');
-    const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+function renderCalendar() {
+    const calendarDays = document.getElementById('calendar-days');
+    const monthYearDisplay = document.getElementById('month-year-display');
+    const weekdaysContainer = document.getElementById('calendar-weekdays');
+
+    calendarDays.innerHTML = '';
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+
+    monthYearDisplay.textContent = `${currentCalendarDate.toLocaleString('pt-BR', { month: 'long' })} ${year}`;
     
-    meses.forEach((m, index) => {
-        selectMes.innerHTML += `<option value="${index}" ${index === currentFinanceiroDate.getMonth() ? 'selected' : ''}>${m}</option>`;
+    // Renderiza os dias da semana
+    weekdaysContainer.innerHTML = '';
+    const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    weekdays.forEach(day => {
+        weekdaysContainer.innerHTML += `<div>${day}</div>`;
     });
 
-    const anoAtual = new Date().getFullYear();
-    for(let i = anoAtual - 2; i <= anoAtual + 2; i++) {
-        selectAno.innerHTML += `<option value="${i}" ${i === anoAtual ? 'selected' : ''}>${i}</option>`;
-    }
-}
+    const firstDayOfMonth = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
 
-function openNovaTransacaoModal(tipo, transacaoId = null) {
-    const form = document.getElementById('nova-transacao-form');
-    form.reset();
-    document.getElementById('transacao-id').value = '';
-    document.getElementById('transacao-tipo').value = tipo;
-    
-    const titulo = document.getElementById('modal-transacao-titulo');
-    const selectCategoria = document.getElementById('transacao-categoria');
-    const selectContrato = document.getElementById('transacao-contrato-id');
-    const groupContrato = document.getElementById('group-contrato-select');
-    const groupRecorrente = document.getElementById('group-recorrente');
-    const selectConta = document.getElementById('transacao-conta'); // Select de Conta
-    
-    titulo.textContent = tipo === 'receita' ? 'Nova Receita (Entrada)' : 'Nova Despesa (Saída)';
-    
-    // Categorias Dinâmicas e Restrição de Caixa
-    selectCategoria.innerHTML = '';
-    
-    // Reseta as opções de conta
-    selectConta.innerHTML = `
-        <option value="pj">Pessoa Jurídica (PJ)</option>
-        <option value="pf">Pessoa Física (PF)</option>
-        <option value="caixa">Caixa Empresa</option>
-    `;
-
-    if (tipo === 'receita') {
-        selectCategoria.innerHTML = `
-            <option value="contrato">Contrato (Mensalidade)</option>
-            <option value="venda">Venda Avulsa</option>
-            <option value="instalacao">Instalação</option>
-            <option value="outros">Outros</option>
-        `;
-        selectContrato.innerHTML = '<option value="">Selecione...</option>';
-        contratos.filter(c => c.ativo).forEach(c => {
-            const cli = clientes.find(cl => cl.id === c.clienteId);
-            selectContrato.innerHTML += `<option value="${c.id}">${cli ? cli.nome : 'N/A'} - ${c.descricao}</option>`;
-        });
-        groupRecorrente.style.display = 'none';
-        
-        // REGRA DE NEGÓCIO: Não permite entrada direta no Caixa
-        // Remove a opção 'caixa' se for Receita
-        const opCaixa = selectConta.querySelector('option[value="caixa"]');
-        if (opCaixa) opCaixa.remove();
-
-    } else {
-        selectCategoria.innerHTML = `
-            <option value="fornecedor">Boleto Fornecedor</option>
-            <option value="despesa_empresa">Despesa Empresa (Geral)</option>
-            <option value="fixa_pf">Despesa Fixa PF</option>
-            <option value="variavel_pf">Despesa Variável PF</option>
-        `;
-        groupContrato.style.display = 'none';
-        groupRecorrente.style.display = 'block';
+    // Preenche os dias vazios no início do mês
+    for (let i = 0; i < firstDayOfMonth; i++) {
+        calendarDays.innerHTML += `<div class="calendar-day not-current-month"></div>`;
     }
 
-    document.getElementById('transacao-data').value = new Date().toISOString().split('T')[0];
-
-    // Edição
-    if (transacaoId) {
-        const t = transacoes.find(x => x.id === transacaoId);
-        if (t) {
-            document.getElementById('transacao-id').value = t.id;
-            document.getElementById('transacao-tipo').value = t.tipo;
-            selectCategoria.value = t.categoria;
-            document.getElementById('transacao-descricao').value = t.descricao;
-            document.getElementById('transacao-valor').value = t.valor;
-            document.getElementById('transacao-data').value = t.data;
-            
-            // Se for edição e tiver caixa (pode ser uma transação antiga), recoloca a opção
-            if (t.conta === 'caixa' && tipo === 'receita') {
-                 selectConta.innerHTML += '<option value="caixa">Caixa Empresa</option>';
-            }
-            selectConta.value = t.conta;
-            
-            document.getElementById('transacao-status').value = t.status;
-            if(t.contratoId) {
-                selectContrato.value = t.contratoId;
-                groupContrato.style.display = 'block';
-            }
-            if(t.recorrente) document.getElementById('transacao-recorrente').checked = true;
-        }
-    } else {
-        selectCategoria.dispatchEvent(new Event('change'));
-    }
-
-    openModal('novaTransacaoModal');
-}
-
-function salvarTransacao() {
-    const id = document.getElementById('transacao-id').value;
-    const tipo = document.getElementById('transacao-tipo').value;
-    const categoria = document.getElementById('transacao-categoria').value;
-    const contratoId = (tipo === 'receita' && categoria === 'contrato') ? document.getElementById('transacao-contrato-id').value : null;
-    const descricao = document.getElementById('transacao-descricao').value;
-    const valor = parseFloat(document.getElementById('transacao-valor').value);
-    const data = document.getElementById('transacao-data').value;
-    const conta = document.getElementById('transacao-conta').value;
-    const status = document.getElementById('transacao-status').value;
-    const recorrente = (tipo === 'despesa') ? document.getElementById('transacao-recorrente').checked : false;
-
-    if (!descricao || isNaN(valor) || !data) {
-        alert('Preencha os campos obrigatórios.');
-        return;
-    }
-
-    const transacaoData = {
-        id: id || generateAlphanumericUniqueId(),
-        tipo,
-        categoria,
-        contratoId,
-        descricao,
-        valor,
-        data,
-        conta, // pj, pf, caixa
-        status, // pendente, pago
-        recorrente,
-        originalRecorrenteId: null
-    };
-
-    if (id) {
-        const index = transacoes.findIndex(t => t.id === id);
-        if (index !== -1) transacoes[index] = { ...transacoes[index], ...transacaoData };
-    } else {
-        transacoes.push(transacaoData);
-    }
-
-    saveData();
-    atualizarDashboardFinanceiro();
-    closeModal('novaTransacaoModal');
-}
-
-// NOVA FUNÇÃO: SALVAR TRANSFERÊNCIA
-function salvarTransferencia() {
-    const origem = document.getElementById('transf-origem').value;
-    const destino = document.getElementById('transf-destino').value;
-    const valor = parseFloat(document.getElementById('transf-valor').value);
-    const data = document.getElementById('transf-data').value;
-    const obs = document.getElementById('transf-obs').value.trim();
-
-    if (isNaN(valor) || valor <= 0) {
-        alert("O valor da transferência deve ser maior que zero.");
-        return;
-    }
-    if (origem === destino) {
-        alert("A conta de origem e destino não podem ser iguais.");
-        return;
-    }
-    if (!data) {
-        alert("Selecione uma data.");
-        return;
-    }
-
-    // Nomes legíveis para descrição
-    const nomesContas = {
-        'pj': 'PJ',
-        'pf': 'PF',
-        'caixa': 'Caixa'
-    };
-
-    // Cria transação de SAÍDA (Despesa) na Origem
-    const saida = {
-        id: generateAlphanumericUniqueId(),
-        tipo: 'despesa',
-        categoria: 'transferencia_saida',
-        descricao: `TRF Enviada para ${nomesContas[destino]} ${obs ? '('+obs+')' : ''}`,
-        valor: valor,
-        data: data,
-        conta: origem,
-        status: 'pago', // Transferências internas geralmente são imediatas
-        recorrente: false
-    };
-
-    // Cria transação de ENTRADA (Receita) no Destino
-    const entrada = {
-        id: generateAlphanumericUniqueId(),
-        tipo: 'receita',
-        categoria: 'transferencia_entrada',
-        descricao: `TRF Recebida de ${nomesContas[origem]} ${obs ? '('+obs+')' : ''}`,
-        valor: valor,
-        data: data,
-        conta: destino,
-        status: 'pago',
-        recorrente: false
-    };
-
-    // Salva ambas
-    transacoes.push(saida);
-    transacoes.push(entrada);
-
-    saveData();
-    atualizarDashboardFinanceiro();
-    closeModal('novaTransferenciaModal');
-    alert('Transferência realizada com sucesso!');
-}
-
-function gerarDespesasRecorrentesAutomaticas() {
-    const recorrentes = transacoes.filter(t => t.recorrente && t.tipo === 'despesa');
-    const hoje = new Date();
-    const mesAtual = hoje.getMonth();
-    const anoAtual = hoje.getFullYear();
-    let mudancas = false;
-
-    recorrentes.forEach(origem => {
-        const jaExisteEsteMes = transacoes.some(t => {
-            if (!t.data) return false;
-            const tDate = new Date(t.data);
-            return t.descricao === origem.descricao && t.valor === origem.valor && tDate.getMonth() === mesAtual && tDate.getFullYear() === anoAtual;
-        });
-
-        if (!jaExisteEsteMes) {
-            const diaOriginal = new Date(origem.data).getDate();
-            const novaData = new Date(anoAtual, mesAtual, diaOriginal);
-            
-            const novaTransacao = {
-                ...origem,
-                id: generateAlphanumericUniqueId(),
-                data: novaData.toISOString().split('T')[0],
-                status: 'pendente',
-                originalRecorrenteId: origem.id
-            };
-            transacoes.push(novaTransacao);
-            mudancas = true;
-        }
-    });
-
-    if (mudancas) saveData();
-}
-
-function atualizarDashboardFinanceiro() {
-    const mesSelecionado = parseInt(document.getElementById('financeiro-mes').value);
-    const anoSelecionado = parseInt(document.getElementById('financeiro-ano').value);
-    
-    const transacoesMes = transacoes.filter(t => {
-        const d = new Date(t.data + 'T12:00:00');
-        return d.getMonth() === mesSelecionado && d.getFullYear() === anoSelecionado;
-    });
-
-    const entradasPJ = transacoesMes.filter(t => t.conta === 'pj' && t.tipo === 'receita').reduce((sum, t) => sum + t.valor, 0);
-    const saidasPJ = transacoesMes.filter(t => t.conta === 'pj' && t.tipo === 'despesa').reduce((sum, t) => sum + t.valor, 0);
-    
-    const entradasPF = transacoesMes.filter(t => t.conta === 'pf' && t.tipo === 'receita').reduce((sum, t) => sum + t.valor, 0);
-    const saidasPF = transacoesMes.filter(t => t.conta === 'pf' && t.tipo === 'despesa').reduce((sum, t) => sum + t.valor, 0);
-
-    const entradasCaixa = transacoesMes.filter(t => t.conta === 'caixa' && t.tipo === 'receita').reduce((sum, t) => sum + t.valor, 0);
-    const saidasCaixa = transacoesMes.filter(t => t.conta === 'caixa' && t.tipo === 'despesa').reduce((sum, t) => sum + t.valor, 0);
-
-    const totalReceitas = transacoesMes.filter(t => t.tipo === 'receita').reduce((sum, t) => sum + t.valor, 0);
-    const totalDespesas = transacoesMes.filter(t => t.tipo === 'despesa').reduce((sum, t) => sum + t.valor, 0);
-    const saldoGeral = totalReceitas - totalDespesas;
-
-    document.getElementById('dashboard-total-pj').textContent = formatarMoeda(entradasPJ - saidasPJ);
-    document.getElementById('dashboard-total-pf').textContent = formatarMoeda(entradasPF - saidasPF);
-    document.getElementById('dashboard-caixa-empresa').textContent = formatarMoeda(entradasCaixa - saidasCaixa);
-    
-    const elSaldo = document.getElementById('dashboard-saldo-geral');
-    elSaldo.textContent = formatarMoeda(saldoGeral);
-    elSaldo.style.color = saldoGeral >= 0 ? '#2ecc71' : '#e74c3c';
-
-    renderizarTabelaTransacoes(transacoesMes);
-    renderizarGraficoFinanceiro(transacoesMes);
-    renderizarCalendarioFinanceiro(transacoesMes, mesSelecionado, anoSelecionado);
-}
-
-function renderizarTabelaTransacoes(lista) {
-    const tbody = document.querySelector('#transacoes-tabela tbody');
-    tbody.innerHTML = '';
-    
-    lista.sort((a, b) => new Date(a.data) - new Date(b.data));
-
-    if (lista.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Nenhuma movimentação neste mês.</td></tr>';
-        return;
-    }
-
-    lista.forEach(t => {
-        const dataFmt = new Date(t.data + 'T12:00:00').toLocaleDateString('pt-BR');
-        const sinal = t.tipo === 'receita' ? '+' : '-';
-        
-        let acoesHtml = `
-            <button class="btn-editar btn-sm" onclick="openNovaTransacaoModal('${t.tipo}', '${t.id}')"><i class="fas fa-edit"></i></button>
-            <button class="btn-excluir btn-sm" onclick="excluirTransacao('${t.id}')"><i class="fas fa-trash-alt"></i></button>
-        `;
-
-        if (t.status === 'pendente') {
-            acoesHtml = `<button class="btn-secondary btn-sm" onclick="confirmarTransacao('${t.id}')" title="Confirmar"><i class="fas fa-check"></i></button>` + acoesHtml;
-        }
-
-        tbody.innerHTML += `
-            <tr style="border-left: 5px solid ${t.tipo === 'receita' ? '#2ecc71' : '#e74c3c'}">
-                <td>${dataFmt}</td>
-                <td>${t.tipo.toUpperCase()}</td>
-                <td>${t.categoria}</td>
-                <td>${t.descricao}</td>
-                <td style="color: ${t.tipo === 'receita' ? '#2ecc71' : '#e74c3c'}"><strong>${sinal} ${formatarMoeda(t.valor)}</strong></td>
-                <td>${t.conta.toUpperCase()}</td>
-                <td><span class="status-badge status-${t.status}">${t.status}</span></td>
-                <td>${acoesHtml}</td>
-            </tr>
-        `;
-    });
-}
-
-function confirmarTransacao(id) {
-    const t = transacoes.find(x => x.id === id);
-    if(t) {
-        t.status = 'pago';
-        saveData();
-        atualizarDashboardFinanceiro();
-    }
-}
-
-function excluirTransacao(id) {
-    if(confirm('Excluir esta transação?')) {
-        transacoes = transacoes.filter(t => t.id !== id);
-        saveData();
-        atualizarDashboardFinanceiro();
-    }
-}
-
-function renderizarGraficoFinanceiro(lista) {
-    const ctx = document.getElementById('financeiroChart').getContext('2d');
-    
-    const receitas = lista.filter(t => t.tipo === 'receita');
-    const despesas = lista.filter(t => t.tipo === 'despesa');
-
-    const totalReceitas = receitas.reduce((sum, t) => sum + t.valor, 0);
-    const totalDespesasEmpresa = despesas.filter(t => t.conta !== 'pf').reduce((sum, t) => sum + t.valor, 0);
-    const totalDespesasPF = despesas.filter(t => t.conta === 'pf').reduce((sum, t) => sum + t.valor, 0);
-
-    if (financeiroChartInstance) { financeiroChartInstance.destroy(); }
-
-    financeiroChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['Entradas (Receita)', 'Saídas (Empresa)', 'Saídas (Pessoal)'],
-            datasets: [{
-                label: 'Fluxo Financeiro',
-                data: [totalReceitas, totalDespesasEmpresa, totalDespesasPF],
-                backgroundColor: ['rgba(46, 204, 113, 0.6)', 'rgba(231, 76, 60, 0.6)', 'rgba(156, 39, 176, 0.6)'],
-                borderColor: ['rgba(46, 204, 113, 1)', 'rgba(231, 76, 60, 1)', 'rgba(156, 39, 176, 1)'],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#e0e0e0' } },
-                x: { grid: { display: false }, ticks: { color: '#e0e0e0' } }
-            },
-            plugins: { legend: { labels: { color: '#e0e0e0' } } }
-        }
-    });
-}
-
-function renderizarCalendarioFinanceiro(lista, mes, ano) {
-    const container = document.getElementById('fin-calendar-days');
-    container.innerHTML = '';
-    const daysInMonth = new Date(ano, mes + 1, 0).getDate();
-
+    // Preenche os dias do mês
     for (let day = 1; day <= daysInMonth; day++) {
-        const div = document.createElement('div');
-        div.className = 'fin-day-item';
-        div.textContent = day;
-        
-        const despesasDia = lista.filter(t => {
-            const d = new Date(t.data + 'T12:00:00');
-            return t.tipo === 'despesa' && d.getDate() === day;
-        });
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'calendar-day';
+        dayDiv.textContent = day;
+        const currentDateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        dayDiv.dataset.date = currentDateString;
 
-        if (despesasDia.length > 0) {
-            div.classList.add('has-event');
-            const temEmpresa = despesasDia.some(t => t.conta !== 'pf');
-            const temPF = despesasDia.some(t => t.conta === 'pf');
-            const dotsDiv = document.createElement('div');
-            dotsDiv.style.marginTop = '5px';
-            if (temEmpresa) dotsDiv.innerHTML += '<span class="dot red"></span>';
-            if (temPF) dotsDiv.innerHTML += '<span class="dot yellow"></span>';
-            div.appendChild(dotsDiv);
-            div.title = `Total dia: ${formatarMoeda(despesasDia.reduce((s,t)=>s+t.valor,0))}`;
+        if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+            dayDiv.classList.add('today');
         }
-        container.appendChild(div);
+
+        // Adiciona pontos de evento
+        const boletosOnDay = boletos.filter(b => b.vencimento === currentDateString && b.status === 'pendente');
+        if (boletosOnDay.length > 0) {
+            const dotsContainer = document.createElement('div');
+            dotsContainer.className = 'event-dots';
+            if (boletosOnDay.some(b => b.type === 'fornecedor')) {
+                dotsContainer.innerHTML += '<div class="event-dot red"></div>';
+            }
+            if (boletosOnDay.some(b => b.type === 'cliente')) {
+                dotsContainer.innerHTML += '<div class="event-dot yellow"></div>';
+            }
+            dayDiv.appendChild(dotsContainer);
+        }
+        
+        dayDiv.addEventListener('click', () => openDayDetailsModal(currentDateString));
+        calendarDays.appendChild(dayDiv);
     }
 }
 
-// =======================================================
-// ========= GERAR RELATÓRIO FINANCEIRO (PDF) ============
-// =======================================================
-
-async function exportarRelatorioFinanceiroPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    
-    const mesIdx = document.getElementById('financeiro-mes').value;
-    const mesNome = document.getElementById('financeiro-mes').options[document.getElementById('financeiro-mes').selectedIndex].text;
-    const ano = document.getElementById('financeiro-ano').value;
-
-    const transacoesFiltradas = transacoes.filter(t => {
-        const d = new Date(t.data + 'T12:00:00');
-        return d.getMonth() == mesIdx && d.getFullYear() == ano;
-    }).sort((a,b) => new Date(a.data) - new Date(b.data));
-
-    // 1. Calcular Dados para Gráficos
-    // Entradas
-    const entPJ = transacoesFiltradas.filter(t => t.tipo === 'receita' && t.conta === 'pj').reduce((s, t) => s + t.valor, 0);
-    const entPF = transacoesFiltradas.filter(t => t.tipo === 'receita' && t.conta === 'pf').reduce((s, t) => s + t.valor, 0);
-    const entCaixa = transacoesFiltradas.filter(t => t.tipo === 'receita' && t.conta === 'caixa').reduce((s, t) => s + t.valor, 0);
-    
-    // Saídas (Categorias)
-    const despCats = {};
-    transacoesFiltradas.filter(t => t.tipo === 'despesa').forEach(t => {
-        let label = t.categoria;
-        if(label === 'fornecedor') label = 'Fornecedor';
-        else if(label === 'despesa_empresa') label = 'Desp. Empresa';
-        else if(label === 'fixa_pf') label = 'Fixa PF';
-        else if(label === 'variavel_pf') label = 'Var. PF';
-        else if(label === 'transferencia_saida') label = 'Transf. Env.';
-        
-        if(!despCats[label]) despCats[label] = 0;
-        despCats[label] += t.valor;
-    });
-
-    // 2. Gerar Imagens dos Gráficos (Invisíveis)
-    const chartImg1 = await generateChartImage(
-        [entPJ, entPF, entCaixa], 
-        ['PJ', 'PF', 'Caixa Emp.'], 
-        ['#0088cc', '#9c27b0', '#ffd700'], 
-        'doughnut', 
-        'Entradas por Conta'
-    );
-    
-    const chartImg2 = await generateChartImage(
-        Object.values(despCats), 
-        Object.keys(despCats), 
-        ['#e74c3c', '#c0392b', '#d35400', '#e67e22', '#7f8c8d'], 
-        'bar', 
-        'Saídas por Categoria'
-    );
-
-    // 3. Montar PDF
-    doc.setFontSize(22);
-    doc.setTextColor(0, 51, 102);
-    doc.text(`RELATÓRIO FINANCEIRO - ${mesNome}/${ano}`, 14, 20);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`GRUPO HENRI SISTEMAS - Gerado em ${new Date().toLocaleDateString()}`, 14, 28);
-
-    // Inserir Gráficos
-    if(chartImg1) doc.addImage(chartImg1, 'PNG', 15, 35, 80, 80);
-    if(chartImg2) doc.addImage(chartImg2, 'PNG', 105, 35, 90, 80);
-
-    // Resumo Numérico
-    const pj = document.getElementById('dashboard-total-pj').textContent;
-    const pf = document.getElementById('dashboard-total-pf').textContent;
-    const caixa = document.getElementById('dashboard-caixa-empresa').textContent;
-    const saldo = document.getElementById('dashboard-saldo-geral').textContent;
-
-    doc.autoTable({
-        head: [['Resumo do Mês', 'Valor']],
-        body: [['Saldo PJ', pj], ['Saldo PF', pf], ['Caixa Empresa', caixa], ['SALDO GERAL', saldo]],
-        startY: 120, 
-        theme: 'grid',
-        columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
-        headStyles: { fillColor: [0, 51, 102] }
-    });
-
-    // Tabela Detalhada com Cores
-    const rows = transacoesFiltradas.map(t => [
-        new Date(t.data + 'T12:00:00').toLocaleDateString('pt-BR'),
-        t.categoria,
-        t.descricao,
-        t.conta.toUpperCase(),
-        (t.tipo === 'receita' ? '+ ' : '- ') + formatarMoeda(t.valor),
-        t.tipo // Coluna oculta para controle de cor
-    ]);
-
-    doc.text("Detalhamento das Movimentações:", 14, doc.lastAutoTable.finalY + 10);
-    
-    doc.autoTable({
-        head: [['Data', 'Categoria', 'Descrição', 'Conta', 'Valor']],
-        body: rows.map(r => r.slice(0, 5)), // Remove coluna de tipo visualmente
-        startY: doc.lastAutoTable.finalY + 15,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [0, 51, 102] },
-        columnStyles: { 4: { halign: 'right', fontStyle: 'bold' } },
-        didParseCell: function(data) {
-            if (data.section === 'body' && data.column.index === 4) {
-                const tipo = rows[data.row.index][5];
-                if (tipo === 'receita') {
-                    data.cell.styles.textColor = [46, 204, 113]; // Verde
-                } else {
-                    data.cell.styles.textColor = [231, 76, 60]; // Vermelho
-                }
-            }
-        }
-    });
-
-    doc.save(`Relatorio_Financeiro_${mesNome}_${ano}.pdf`);
+function changeMonth(offset) {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
+    renderCalendar();
 }
 
-// Função auxiliar para criar imagem de gráfico off-screen
-function generateChartImage(dataArr, labelsArr, colorsArr, type, title) {
-    return new Promise((resolve) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 400;
-        canvas.height = 400;
-        canvas.style.visibility = 'hidden';
-        document.body.appendChild(canvas);
+function salvarBoleto(type) {
+    const form = document.getElementById(`boleto-${type}-form`);
+    const nome = form.querySelector(`#boleto-${type}-nome`).value.trim();
+    const detalhes = form.querySelector(`#boleto-${type}-${type === 'cliente' ? 'servico' : 'material'}`).value.trim();
+    const vencimento = form.querySelector(`#boleto-${type}-vencimento`).value;
+    const valor = parseFloat(form.querySelector(`#boleto-${type}-valor`).value);
+    const parcelas = parseInt(form.querySelector(`#boleto-${type}-parcelas`).value) || 1;
 
-        const ctx = canvas.getContext('2d');
-        const tempChart = new Chart(ctx, {
+    if (!nome || !detalhes || !vencimento || isNaN(valor)) {
+        alert('Preencha todos os campos obrigatórios corretamente.');
+        return;
+    }
+
+    const originalId = generateAlphanumericUniqueId();
+    let dataVencimento = new Date(vencimento + 'T12:00:00'); // Adiciona T12:00 para evitar problemas de fuso horário
+
+    for (let i = 0; i < parcelas; i++) {
+        const vencimentoFormatado = dataVencimento.toISOString().split('T')[0];
+        
+        const novoBoleto = {
+            id: generateAlphanumericUniqueId(),
+            originalId: originalId,
             type: type,
-            data: {
-                labels: labelsArr,
-                datasets: [{
-                    label: title,
-                    data: dataArr,
-                    backgroundColor: colorsArr,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: false,
-                animation: false,
-                plugins: {
-                    legend: { display: true, position: 'bottom' },
-                    title: { display: true, text: title }
-                }
-            }
-        });
+            nome: nome,
+            detalhes: detalhes,
+            valor: valor,
+            vencimento: vencimentoFormatado,
+            parcela: { atual: i + 1, total: parcelas },
+            status: 'pendente' // 'pendente' ou 'pago'
+        };
+        boletos.push(novoBoleto);
+        
+        // Incrementa o mês para a próxima parcela
+        dataVencimento.setMonth(dataVencimento.getMonth() + 1);
+    }
 
-        setTimeout(() => {
-            const imgData = canvas.toDataURL('image/png');
-            tempChart.destroy();
-            canvas.remove();
-            resolve(imgData);
-        }, 100);
+    saveData();
+    renderCalendar();
+    checkForUpcomingBoletos();
+    alert(`${parcelas} boleto(s) de ${type} adicionado(s) com sucesso!`);
+    form.reset();
+}
+
+
+function checkForUpcomingBoletos() {
+    const alertIcon = document.getElementById('alert-icon-container');
+    const today = new Date();
+    const sevenDaysLater = new Date();
+    sevenDaysLater.setDate(today.getDate() + 7);
+
+    const todayStr = today.toISOString().split('T')[0];
+    const sevenDaysLaterStr = sevenDaysLater.toISOString().split('T')[0];
+
+    const upcomingBoletos = boletos.filter(b => 
+        b.status === 'pendente' && 
+        b.vencimento >= todayStr && 
+        b.vencimento <= sevenDaysLaterStr
+    );
+
+    if (upcomingBoletos.length > 0) {
+        alertIcon.style.display = 'block';
+    } else {
+        alertIcon.style.display = 'none';
+    }
+}
+
+function openUpcomingBoletosModal() {
+    const modal = document.getElementById('upcoming-boletos-modal');
+    const listContainer = document.getElementById('upcoming-boletos-list');
+    listContainer.innerHTML = '';
+
+    const today = new Date();
+    const sevenDaysLater = new Date();
+    sevenDaysLater.setDate(today.getDate() + 7);
+    const todayStr = today.toISOString().split('T')[0];
+    const sevenDaysLaterStr = sevenDaysLater.toISOString().split('T')[0];
+
+    // Popula a lista de compromissos para os próximos 7 dias
+    const upcomingBoletos = boletos
+        .filter(b => b.status === 'pendente' && b.vencimento >= todayStr && b.vencimento <= sevenDaysLaterStr)
+        .sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento));
+
+    if (upcomingBoletos.length === 0) {
+        listContainer.innerHTML = '<p style="text-align: center;">Nenhum compromisso vencendo nos próximos 7 dias.</p>';
+    } else {
+        upcomingBoletos.forEach(boleto => {
+            listContainer.innerHTML += createBoletoItemHTML(boleto);
+        });
+    }
+
+    // Calcula os totais para o mês atual
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const boletosThisMonth = boletos.filter(b => {
+        const vencimentoDate = new Date(b.vencimento + 'T12:00:00');
+        return b.status === 'pendente' && vencimentoDate.getMonth() === currentMonth && vencimentoDate.getFullYear() === currentYear;
+    });
+
+    const countFornecedor = boletosThisMonth.filter(b => b.type === 'fornecedor').length;
+    const countCliente = boletosThisMonth.filter(b => b.type === 'cliente').length;
+    
+    document.querySelector('.count-circle-red').textContent = countFornecedor;
+    document.querySelector('.count-circle-yellow').textContent = countCliente;
+
+    modal.classList.add('active');
+}
+
+function openDayDetailsModal(dateString) {
+    const modal = document.getElementById('day-details-modal');
+    const title = document.getElementById('day-details-title');
+    const listContainer = document.getElementById('day-details-list');
+    listContainer.innerHTML = '';
+
+    const [year, month, day] = dateString.split('-');
+    title.textContent = `Compromissos para ${day}/${month}/${year}`;
+
+    const boletosOnDay = boletos.filter(b => b.vencimento === dateString);
+
+    if (boletosOnDay.length === 0) {
+        listContainer.innerHTML = '<p style="text-align: center;">Nenhum compromisso para esta data.</p>';
+    } else {
+        boletosOnDay.forEach(boleto => {
+             listContainer.innerHTML += createBoletoItemHTML(boleto, true); // Adiciona botões de ação
+        });
+    }
+
+    modal.classList.add('active');
+}
+
+function createBoletoItemHTML(boleto, withActions = false) {
+    const parcelaInfo = boleto.parcela.total > 1 ? ` (Parcela ${boleto.parcela.atual}/${boleto.parcela.total})` : '';
+    const vencimentoFmt = new Date(boleto.vencimento + 'T12:00:00').toLocaleDateString('pt-BR');
+    
+    let actionsHTML = '';
+    if (withActions) {
+        actionsHTML = `<div class="boleto-actions">`;
+        if (boleto.status === 'pendente') {
+            actionsHTML += `<button class="btn-secondary btn-sm" onclick="marcarBoletoPago('${boleto.id}')"><i class="fas fa-check"></i> Marcar como Pago</button>`;
+        }
+        actionsHTML += `<button class="btn-danger btn-sm" onclick="excluirBoleto('${boleto.id}', ${boleto.parcela.total > 1})"><i class="fas fa-trash-alt"></i> Excluir</button>
+        </div>`;
+    }
+
+    return `
+        <div class="boleto-item ${boleto.type} ${boleto.status === 'pago' ? 'paid' : ''}">
+            <p class="boleto-header">${boleto.nome}${parcelaInfo}</p>
+            <p>${boleto.detalhes}</p>
+            <p><strong>Vencimento:</strong> ${vencimentoFmt}</p>
+            <p class="boleto-value"><strong>Valor:</strong> ${formatarMoeda(boleto.valor)}</p>
+            ${actionsHTML}
+        </div>
+    `;
+}
+
+function marcarBoletoPago(id) {
+    const boletoIndex = boletos.findIndex(b => b.id === id);
+    if (boletoIndex > -1) {
+        boletos[boletoIndex].status = 'pago';
+        saveData();
+        renderCalendar();
+        checkForUpcomingBoletos();
+        closeModal('day-details-modal');
+        alert('Compromisso marcado como finalizado!');
+    }
+}
+
+function excluirBoleto(id, isParcelado) {
+    let confirmMessage = 'Tem certeza que deseja excluir este boleto?';
+    if (isParcelado) {
+        confirmMessage = 'Este boleto faz parte de um parcelamento. Deseja excluir apenas esta parcela ou todas as parcelas futuras?';
+        const choice = prompt(confirmMessage + '\nDigite "ESTA" para excluir apenas esta ou "TODAS" para excluir esta e as futuras.');
+
+        if (choice && choice.toUpperCase() === 'TODAS') {
+            const boleto = boletos.find(b => b.id === id);
+            if (boleto) {
+                boletos = boletos.filter(b => b.originalId !== boleto.originalId || b.parcela.atual < boleto.parcela.atual);
+            }
+        } else if (choice && choice.toUpperCase() === 'ESTA') {
+            boletos = boletos.filter(b => b.id !== id);
+        } else {
+            return; // Cancelar se a resposta não for válida
+        }
+    } else {
+        if (!confirm(confirmMessage)) return;
+        boletos = boletos.filter(b => b.id !== id);
+    }
+
+    saveData();
+    renderCalendar();
+    checkForUpcomingBoletos();
+    closeModal('day-details-modal');
+    alert('Boleto(s) excluído(s) com sucesso!');
+}
+
+
+// Funções de Modal
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('active');
+    }
+}
+
+function openItemModal(itemIndex = -1, source = 'current') {
+    const modal = document.getElementById('itemModal');
+    modal.dataset.source = source;
+    const form = document.getElementById('item-form');
+    form.reset();
+    isEditingItem = itemIndex > -1;
+    editingItemIndex = itemIndex;
+
+    const deleteBtn = document.getElementById('delete-item-btn');
+    carregarCategoriasNoModalItem();
+
+    let orcamentoDeOrigem;
+    if (source === 'current') {
+        orcamentoDeOrigem = currentOrcamento;
+    } else {
+        const orcamentoId = document.getElementById('edit-orcamento-id').value;
+        orcamentoDeOrigem = orcamentos.find(o => o.id === orcamentoId);
+    }
+
+    if (isEditingItem && orcamentoDeOrigem && orcamentoDeOrigem.itens[itemIndex]) {
+        const item = orcamentoDeOrigem.itens[itemIndex];
+        const produto = produtos.find(p => p.id === item.produtoId);
+        document.getElementById('modal-item-categoria').value = produto ? (produto.categoria || 'Geral') : '';
+        carregarProdutosNoModalPorCategoria();
+        document.getElementById('modal-produto').value = item.produtoId;
+        document.getElementById('modal-quantidade').value = item.quantidade;
+        document.getElementById('modal-valor').value = item.valor.toFixed(2);
+        modal.querySelector('h3').textContent = 'Editar Item';
+        modal.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-edit"></i> Atualizar Item';
+        deleteBtn.style.display = 'inline-block';
+    } else {
+        carregarProdutosNoModalPorCategoria();
+        modal.querySelector('h3').textContent = 'Adicionar Item';
+        modal.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus-circle"></i> Adicionar Item';
+        deleteBtn.style.display = 'none';
+    }
+    modal.classList.add('active');
+}
+
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if(modal) {
+        modal.classList.remove('active');
+    }
+}
+
+function carregarCategoriasNoModalItem() {
+    const select = document.getElementById('modal-item-categoria');
+    select.innerHTML = '<option value="">Todas as Categorias</option>';
+    const categorias = [...new Set(produtos.map(p => p.categoria || 'Geral'))].sort();
+    categorias.forEach(cat => select.innerHTML += `<option value="${cat}">${cat}</option>`);
+}
+
+function carregarProdutosNoModalPorCategoria() {
+    const categoria = document.getElementById('modal-item-categoria').value;
+    const select = document.getElementById('modal-produto');
+    select.innerHTML = '<option value="">Selecione um produto...</option>';
+    const produtosFiltrados = categoria ? produtos.filter(p => (p.categoria || 'Geral') === categoria) : produtos;
+    produtosFiltrados.forEach(p => {
+        const valorDisplay = `(R$ ${p.valor.toFixed(2).replace('.', ',')})`;
+        select.innerHTML += `<option value="${p.id}" data-valor="${p.valor}">${p.nomeProposta} ${valorDisplay}</option>`;
     });
 }
