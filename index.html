@@ -788,10 +788,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script type="module">
+        // Import the functions you need from the SDKs you need
+        // MODIFICADO: Adicionado 'signInWithRedirect' para o PWA
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+        import { getAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+        // IMPORTANTE: Adicione 'collection' e 'doc' para Firestore
         import { getFirestore, doc, setDoc, getDoc, collection } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
 
+        // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyAYFweRxESPvNEuPESJ6Zfuka0VrgS6Cuk",
             authDomain: "appweb-grupohenriques.firebaseapp.com",
@@ -802,6 +806,7 @@
             measurementId: "G-SF2BKEB0MX"
         };
 
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -809,12 +814,15 @@
         window.jsPDF = window.jspdf.jsPDF;
         document.getElementById('current-year').textContent = new Date().getFullYear();
 
+        // Pass Firebase instances AND functions to the global scope or to script.js via a setup function
         window.firebaseAuth = auth;
         window.firebaseDb = db;
         window.GoogleAuthProvider = GoogleAuthProvider;
         window.signInWithPopup = signInWithPopup;
+        window.signInWithRedirect = signInWithRedirect; // MODIFICADO: Adicionado ao window
         window.signOut = signOut;
         window.onAuthStateChanged = onAuthStateChanged;
+        // IMPORTANTE: Passe as funções 'doc', 'setDoc', 'getDoc', 'collection'
         window.firebaseDoc = doc;
         window.firebaseSetDoc = setDoc;
         window.firebaseGetDoc = getDoc;
@@ -844,15 +852,24 @@
             const splash = document.getElementById('splash-screen');
             const appWrapper = document.querySelector('.app-wrapper');
 
+            // Esconde a splash screen e mostra o app após 4 segundos
             setTimeout(() => {
+                // Adiciona a classe para iniciar o fade-out da splash screen
                 splash.classList.add('hidden');
+
+                // Adiciona a classe para mostrar e iniciar o fade-in do app
                 appWrapper.classList.add('visible');
+
+                // Opcional: Remove completamente a splash screen do DOM
+                // após a animação de fade-out (500ms) terminar.
                 setTimeout(() => {
                     splash.remove();
                 }, 500);
-            }, 4000); 
+
+            }, 4000); // 4000 milissegundos = 4 segundos
         });
     </script>
     </body>
 </html>
 
+**Posso gerar o script.js?**

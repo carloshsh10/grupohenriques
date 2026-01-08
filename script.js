@@ -145,7 +145,8 @@ function configurarEventListeners() {
 async function signInWithGoogle() {
     try {
         const provider = new window.GoogleAuthProvider();
-        await window.signInWithPopup(window.firebaseAuth, provider);
+        // MODIFICADO: Usar redirecionamento para funcionar no PWA/Mobile
+        await window.signInWithRedirect(window.firebaseAuth, provider);
     } catch (error) {
         console.error("Erro no login com Google: ", error);
         updateFirebaseStatus('Erro de Conexão', 'red');
