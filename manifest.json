@@ -2,7 +2,7 @@
   "name": "GRUPO HENRIQUES - Sistema de Orçamentos",
   "short_name": "GH Orçamentos",
   "description": "Sistema de Orçamentos e Gestão para GRUPO HENRIQUES.",
-  "start_url": "Index.html",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#0f0017",
