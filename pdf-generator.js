@@ -1,16 +1,15 @@
 /**
  * Gerador de PDF Profissional para o Sistema Grupo Henriques
- * Atualizado com Logo no Cabeçalho e Marca D'água
+ * Versão Otimizada para PNG
  */
 
-// Função auxiliar para carregar a imagem e converter para DataURL (necessário para o jsPDF)
+// Função auxiliar para carregar a imagem
 function carregarLogo(url) {
     return new Promise((resolve) => {
         const img = new Image();
-        img.crossOrigin = "Anonymous"; // Necessário se a imagem vier de outro domínio, boa prática manter
+        img.crossOrigin = "Anonymous";
         img.src = url;
         img.onload = () => {
-            // Cria um canvas para desenhar a imagem e extrair os dados
             const canvas = document.createElement('canvas');
             canvas.width = img.width;
             canvas.height = img.height;
@@ -31,13 +30,12 @@ function carregarLogo(url) {
     });
 }
 
-// Função principal transformada em ASYNC para aguardar o carregamento da logo
 async function gerarPDF(isPreview = false, orcamentoData = null) {
     try {
         const orcamentoParaGerar = orcamentoData || currentOrcamento;
 
         if (!orcamentoParaGerar || !orcamentoParaGerar.clienteId || orcamentoParaGerar.itens.length === 0) {
-            alert('Dados insuficientes para gerar a proposta (cliente e itens são necessários).');
+            alert('Dados insuficientes para gerar a proposta.');
             return;
         }
 
@@ -52,41 +50,37 @@ async function gerarPDF(isPreview = false, orcamentoData = null) {
             return;
         }
 
-        // Feedback visual simples (opcional, já que é rápido)
         document.body.style.cursor = 'wait';
 
-        // 1. Carrega a Logo antes de começar
-        const logoInfo = await carregarLogo('assets/HENRI LOGO.svg');
+        // CARREGA A LOGO PNG AGORA
+        const logoInfo = await carregarLogo('assets/logo.png');
 
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         const proposalId = orcamentoParaGerar.id || 'Novo';
 
         doc.setProperties({
-            title: `Proposta Comercial ${cliente.nome} - Nº ${proposalId}`,
-            subject: 'Proposta Comercial GRUPO HENRI SISTEMAS',
-            author: 'GRUPO HENRI SISTEMAS',
-            creator: 'Sistema de Orçamentos'
+            title: `Proposta ${cliente.nome}`,
+            subject: 'Orçamento GRUPO HENRI SISTEMAS',
+            author: 'GRUPO HENRI SISTEMAS'
         });
 
-        // --- GERAÇÃO DAS PÁGINAS ---
-
         // Página 1
-        adicionarMarcaDagua(doc, logoInfo); // Adiciona marca d'água no fundo
+        adicionarMarcaDagua(doc, logoInfo);
         let yPosAposCabecalho = adicionarCabecalhoPremium(doc, cliente, orcamentoParaGerar, logoInfo);
-        let yPosAposItens = adicionarItensOrcamentoPremium(doc, orcamentoParaGerar, yPosAposCabecalho, logoInfo); // Passa logoInfo se precisar desenhar em novas páginas
+        let yPosAposItens = adicionarItensOrcamentoPremium(doc, orcamentoParaGerar, yPosAposCabecalho, logoInfo);
         let yPosAposTotais = adicionarTotaisPremium(doc, orcamentoParaGerar, yPosAposItens);
         
         adicionarInformacoesAdicionaisPremium(doc, orcamentoParaGerar, yPosAposTotais);
         adicionarRodapePremium(doc, 1);
 
-        // Página 2 (Termos)
+        // Página 2
         doc.addPage();
         adicionarMarcaDagua(doc, logoInfo);
         adicionarTermosCondicoes(doc);
         adicionarRodapePremium(doc, 2);
 
-        // Página 3 (Apresentação)
+        // Página 3
         doc.addPage();
         adicionarMarcaDagua(doc, logoInfo);
         adicionarApresentacao(doc);
@@ -97,78 +91,54 @@ async function gerarPDF(isPreview = false, orcamentoData = null) {
         if (isPreview) {
             window.open(doc.output('bloburl'), '_blank');
         } else {
-            // Sanitiza o nome do arquivo
             const servicoTitulo = orcamentoParaGerar.servicos ? orcamentoParaGerar.servicos.replace(/[^a-zA-Z0-9à-úÀ-Ú \-_]/g, "").trim() : "Orcamento";
             const nomeArquivo = `${servicoTitulo} - ${proposalId}.pdf`;
             doc.save(nomeArquivo);
-            // alert('PDF gerado com sucesso!'); // Removido para fluxo mais limpo
         }
 
     } catch (error) {
         document.body.style.cursor = 'default';
-        alert('Ocorreu um erro ao gerar o PDF. Detalhes no console.');
-        console.error('Erro ao gerar PDF:', error);
+        alert('Erro ao gerar PDF: ' + error.message);
+        console.error(error);
     }
 }
 
-/**
- * Adiciona a Marca D'água centralizada com transparência
- */
 function adicionarMarcaDagua(doc, logoInfo) {
     if (!logoInfo.ok) return;
-
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const imgWidth = 100; // Tamanho da marca d'água
-    // Calcula proporção para manter aspect ratio
+    const imgWidth = 80; 
     const ratio = logoInfo.width / logoInfo.height;
     const imgHeight = imgWidth / ratio;
-
     const x = (pageWidth - imgWidth) / 2;
     const y = (pageHeight - imgHeight) / 2;
 
-    // Salva o estado atual (cores, transparência)
     doc.saveGraphicsState();
-    
-    // Define transparência (Alpha) bem baixa para ser discreto (0.05 a 0.1)
-    doc.setGState(new doc.GState({ opacity: 0.08 })); 
-    
+    doc.setGState(new doc.GState({ opacity: 0.05 })); // Bem sutil
     doc.addImage(logoInfo.data, 'PNG', x, y, imgWidth, imgHeight);
-
-    // Restaura o estado para não afetar o resto do texto
     doc.restoreGraphicsState();
 }
 
-// --- Funções de Layout ---
-
 function adicionarCabecalhoPremium(doc, cliente, orcamento, logoInfo) {
-    const startY = 0; // Começa do topo absoluto para a tarja
+    const startY = 0; 
     let y = startY;
     const pageWidth = doc.internal.pageSize.getWidth();
-    const headerHeight = 35; // Altura da tarja azul
+    const headerHeight = 35; 
 
-    // 1. Fundo do Cabeçalho (Tarja Azul Escura)
-    doc.setFillColor(15, 0, 23); // Cor #0f0017 do tema (Dark Neon) ou Azul #003366
+    doc.setFillColor(15, 0, 23); 
     doc.rect(0, 0, pageWidth, headerHeight, 'F');
 
-    // 2. Logo no Cabeçalho (Esquerda)
     if (logoInfo.ok) {
-        const logoSize = 24; // Tamanho da logo no header
-        const marginLogo = 10;
-        const logoY = (headerHeight - logoSize) / 2; // Centralizar verticalmente na tarja
+        const logoSize = 22; 
+        const marginLogo = 12;
+        const logoY = (headerHeight - logoSize) / 2; 
 
-        // Efeito "Badge" Branco (Círculo de fundo para destacar a logo escura/colorida na tarja escura)
+        // Badge Branco
         doc.setFillColor(255, 255, 255);
-        // Desenha um círculo branco atrás da logo
         doc.circle(marginLogo + (logoSize/2), logoY + (logoSize/2), (logoSize/2) + 2, 'F'); 
-
-        // Desenha a logo sobre o círculo branco
         doc.addImage(logoInfo.data, 'PNG', marginLogo, logoY, logoSize, logoSize);
     }
 
-    // 3. Textos do Cabeçalho (Centralizados e Direita)
-    // Ajuste: Deslocar textos um pouco se tiver logo, mas manter alinhamento central da página fica elegante
-    
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
@@ -176,34 +146,29 @@ function adicionarCabecalhoPremium(doc, cliente, orcamento, logoInfo) {
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 188, 212); // Ciano Neon para destaque
+    doc.setTextColor(0, 188, 212);
     doc.text('SEGURANÇA ELETRÔNICA', pageWidth / 2, 20, { align: 'center' });
 
     doc.setFontSize(7.5);
     doc.setTextColor(220, 220, 220);
     doc.text('CNPJ: 22.827.727/0001-80 | Contato: (24) 99223-2018 / 99296-9844', pageWidth / 2, 27, { align: 'center' });
 
-    // 4. Box de Dados do Cliente
     y = headerHeight + 8;
     const margin = 15;
-    const clienteBoxHeight = 40; // Altura um pouco menor para ficar compacto
+    const clienteBoxHeight = 40; 
 
-    // Fundo cinza bem claro para o box do cliente
     doc.setFillColor(248, 249, 250); 
     doc.setDrawColor(200, 200, 200);
-    doc.roundedRect(margin, y, pageWidth - 2*margin, clienteBoxHeight, 2, 2, 'FD'); // Fill and Draw
+    doc.roundedRect(margin, y, pageWidth - 2*margin, clienteBoxHeight, 2, 2, 'FD'); 
 
-    // Título do Box
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 51, 102); // Azul escuro
+    doc.setTextColor(0, 51, 102); 
     doc.text('DADOS DO CLIENTE', margin + 5, y + 8);
 
-    // Linha divisória sutil
     doc.setDrawColor(220, 220, 220);
     doc.line(margin + 5, y + 10, pageWidth - margin - 5, y + 10);
 
-    // Conteúdo do Cliente
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
@@ -211,14 +176,8 @@ function adicionarCabecalhoPremium(doc, cliente, orcamento, logoInfo) {
     let infoY = y + 16;
     const lineH = 5;
 
-    // Coluna Esquerda
     doc.text(`Cliente: ${cliente.nome}`, margin + 5, infoY);
-    if(cliente.cpfCnpj) {
-        // Se couber, coloca ao lado, senão em baixo (simples aqui: em baixo para garantir)
-        // Mas vamos tentar otimizar espaço
-    }
     
-    // Serviços / Objeto (Importante)
     infoY += lineH;
     let servicoTxt = orcamento.servicos || 'Serviços de Segurança Eletrônica';
     if(servicoTxt.length > 50) servicoTxt = servicoTxt.substring(0, 50) + "...";
@@ -233,7 +192,6 @@ function adicionarCabecalhoPremium(doc, cliente, orcamento, logoInfo) {
         doc.text(`Endereço: ${cliente.endereco}`, margin + 5, infoY);
     }
 
-    // Coluna Direita (Dados da Proposta) - Alinhado à direita dentro do box
     let rightX = pageWidth - margin - 5;
     let rightY = y + 16;
     
@@ -288,27 +246,14 @@ function adicionarItensOrcamentoPremium(doc, orcamento, startY, logoInfo) {
         startY: y, 
         margin: {left: margin, right: margin},
         theme: 'striped',
-        styles: { 
-            fontSize: 9, 
-            cellPadding: 3, 
-            overflow: 'linebreak', 
-            lineColor: [220, 220, 220], 
-            lineWidth: 0.1,
-            valign: 'middle'
-        },
-        headerStyles: { 
-            fillColor: [15, 0, 23], // Header da tabela combinando com o tema
-            textColor: [255, 255, 255], 
-            fontStyle: 'bold', 
-            halign: 'center' 
-        },
+        styles: { fontSize: 9, cellPadding: 3, valign: 'middle' },
+        headerStyles: { fillColor: [15, 0, 23], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
         columnStyles: { 
             produto: {cellWidth: 'auto', halign: 'left'}, 
             quantidade: {cellWidth: 15, halign: 'center'}, 
             unitario: {cellWidth: 25, halign: 'right'}, 
             total: {cellWidth: 30, halign: 'right'} 
         },
-        // Reaplica a marca d'água se a tabela quebrar página
         didDrawPage: function(data) { 
             adicionarMarcaDagua(doc, logoInfo);
             adicionarRodapePremium(doc, data.pageNumber); 
@@ -323,7 +268,6 @@ function adicionarTotaisPremium(doc, orcamento, startY) {
     const margin = 15;
     const pageWidth = doc.internal.pageSize.getWidth();
     
-    // Evita quebra de página ruim para o bloco de totais
     if (y > doc.internal.pageSize.getHeight() - 40) {
         doc.addPage();
         y = 20;
@@ -332,18 +276,16 @@ function adicionarTotaisPremium(doc, orcamento, startY) {
     const totalProdutos = orcamento.itens.reduce((sum, item) => sum + (item.quantidade * item.valor), 0);
     const totalGeral = totalProdutos + (orcamento.maoDeObra || 0);
     
-    // Caixa de Totais à Direita
     const boxWidth = 80;
     const xBox = pageWidth - margin - boxWidth;
     
     doc.setFillColor(245, 245, 245);
-    doc.rect(xBox, y, boxWidth, 25, 'F'); // Fundo leve
+    doc.rect(xBox, y, boxWidth, 25, 'F');
     
-    // Linha final
-    doc.setDrawColor(0, 188, 212); // Ciano neon do tema
+    doc.setDrawColor(0, 188, 212); 
     doc.setLineWidth(0.5);
-    doc.line(xBox, y, xBox + boxWidth, y); // Linha topo
-    doc.line(xBox, y + 25, xBox + boxWidth, y + 25); // Linha base
+    doc.line(xBox, y, xBox + boxWidth, y); 
+    doc.line(xBox, y + 25, xBox + boxWidth, y + 25); 
 
     let currentY = y + 8;
     doc.setFontSize(9);
@@ -361,7 +303,7 @@ function adicionarTotaisPremium(doc, orcamento, startY) {
     doc.setTextColor(0, 51, 102);
     doc.text(formatarMoeda(totalGeral), pageWidth - margin - 5, currentY, {align: 'right'});
 
-    return y + 30; // Retorna Y abaixo do box
+    return y + 30; 
 }
 
 function adicionarInformacoesAdicionaisPremium(doc, orcamento, startY) {
@@ -370,13 +312,11 @@ function adicionarInformacoesAdicionaisPremium(doc, orcamento, startY) {
     const pageWidth = doc.internal.pageSize.getWidth();
     const width = pageWidth - (2 * margin);
 
-    // Se tiver pouco espaço, nova página
     if (y > doc.internal.pageSize.getHeight() - 50) {
         doc.addPage();
         y = 20;
     }
 
-    // Condições de Pagamento e Obs
     doc.setFontSize(10);
     doc.setTextColor(0, 51, 102);
     doc.setFont('helvetica', 'bold');
@@ -420,7 +360,6 @@ function adicionarTermosCondicoes(doc) {
     doc.setTextColor(0, 51, 102);
     doc.text('TERMOS E CONDIÇÕES GERAIS', margin, y);
     
-    // Linha decorativa
     doc.setDrawColor(0, 188, 212);
     doc.setLineWidth(0.5);
     doc.line(margin, y + 2, margin + 85, y + 2);
@@ -448,7 +387,7 @@ function adicionarTermosCondicoes(doc) {
         
         const lines = doc.splitTextToSize(item.text, contentWidth);
         doc.text(lines, margin, y);
-        y += (lines.length * 4.5) + 6; // Espaço para próximo item
+        y += (lines.length * 4.5) + 6; 
     });
 }
 
@@ -484,7 +423,6 @@ function adicionarApresentacao(doc) {
 
     y += 15;
     
-    // Assinatura Digital Simulada
     doc.setDrawColor(150);
     doc.line(margin, y, margin + 80, y);
     y += 5;
@@ -504,25 +442,23 @@ function adicionarRodapePremium(doc, pageNum) {
     const h = 12; 
     const y = pageHeight - h;
 
-    doc.setFillColor(240, 240, 240); // Rodapé cinza claro
+    doc.setFillColor(240, 240, 240); 
     doc.rect(0, y, pageWidth, h, 'F');
 
     doc.setFontSize(7);
     doc.setTextColor(100, 100, 100);
     doc.setFont('helvetica', 'normal');
     
-    const textoRodape = "Grupo Henri Sistemas | Segurança Eletrônica e Automação | www.grupohenrisistemas.com.br"; // Exemplo
-    doc.text(textoRodape, marginX = 15, y + 8);
+    const textoRodape = "Grupo Henri Sistemas | Segurança Eletrônica e Automação"; 
+    doc.text(textoRodape, 15, y + 8);
     
     doc.text(`Página ${pageNum}`, pageWidth - 20, y + 8, { align: 'right' });
 }
 
-// Utilitários
 function formatarMoeda(valor) {
     return 'R$ ' + parseFloat(valor || 0).toFixed(2).replace('.', ',');
 }
 
 function formatarNumeroSemSimbolo(valor) {
     return parseFloat(valor || 0).toFixed(2).replace('.', ',');
-        }
-    
+}
