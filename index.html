@@ -526,7 +526,9 @@
                 <form id="item-manutencao-form">
                     <div class="form-group">
                         <label for="manutencao-descricao-servico">Descrição do Serviço ou Teste:</label>
-                        <input type="text" id="manutencao-descricao-servico" placeholder="Ex: Teste de Bateria 12V" required>
+                        <input type="text" id="manutencao-descricao-servico" list="lista-sugestoes-servicos" placeholder="Ex: Teste de Bateria 12V" required>
+                        <datalist id="lista-sugestoes-servicos">
+                            </datalist>
                     </div>
                     <div class="form-group">
                         <label for="manutencao-status-servico">Resultado / Observação:</label>
@@ -690,15 +692,13 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <script type="module">
-        // Import the functions you need from the SDKs you need
-        // MODIFICADO: Adicionado 'signInWithRedirect' para o PWA
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-        import { getAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
-        // IMPORTANTE: Adicione 'collection' e 'doc' para Firestore
-        import { getFirestore, doc, setDoc, getDoc, collection } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+    
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-        // Your web app's Firebase configuration
+    <script>
+        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAYFweRxESPvNEuPESJ6Zfuka0VrgS6Cuk",
             authDomain: "appweb-grupohenriques.firebaseapp.com",
@@ -709,29 +709,14 @@
             measurementId: "G-SF2BKEB0MX"
         };
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
+        // Inicializa o Firebase GLOBALMENTE
+        firebase.initializeApp(firebaseConfig);
+        
+        // Configurações globais para uso nos outros scripts
         window.jsPDF = window.jspdf.jsPDF;
         document.getElementById('current-year').textContent = new Date().getFullYear();
-
-        // Pass Firebase instances AND functions to the global scope or to script.js via a setup function
-        window.firebaseAuth = auth;
-        window.firebaseDb = db;
-        window.GoogleAuthProvider = GoogleAuthProvider;
-        window.signInWithPopup = signInWithPopup;
-        window.signInWithRedirect = signInWithRedirect; // MODIFICADO: Adicionado ao window
-        window.signOut = signOut;
-        window.onAuthStateChanged = onAuthStateChanged;
-        // IMPORTANTE: Passe as funções 'doc', 'setDoc', 'getDoc', 'collection'
-        window.firebaseDoc = doc;
-        window.firebaseSetDoc = setDoc;
-        window.firebaseGetDoc = getDoc;
-        window.firebaseCollection = collection;
-
     </script>
+
     <script src="script.js"></script>
     <script src="pdf-generator.js"></script>
     <script src="backup.js"></script>
@@ -755,21 +740,13 @@
             const splash = document.getElementById('splash-screen');
             const appWrapper = document.querySelector('.app-wrapper');
 
-            // Esconde a splash screen e mostra o app após 4 segundos
             setTimeout(() => {
-                // Adiciona a classe para iniciar o fade-out da splash screen
                 splash.classList.add('hidden');
-
-                // Adiciona a classe para mostrar e iniciar o fade-in do app
                 appWrapper.classList.add('visible');
-
-                // Opcional: Remove completamente a splash screen do DOM
-                // após a animação de fade-out (500ms) terminar.
                 setTimeout(() => {
                     splash.remove();
                 }, 500);
-
-            }, 4000); // 4000 milissegundos = 4 segundos
+            }, 4000); 
         });
     </script>
     </body>

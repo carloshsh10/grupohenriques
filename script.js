@@ -5,7 +5,21 @@ let clientes = [];
 let produtos = [];
 let orcamentos = [];
 let contratos = [];
-let manutencoes = []; // Nova lista de relatórios
+let manutencoes = [];
+// Banco de dados de serviços aprendidos
+let bancoServicos = [
+    "Teste de Bateria 12V",
+    "Limpeza de Lentes e Câmeras",
+    "Ajuste de Foco",
+    "Verificação de Gravação (HD)",
+    "Teste de Sensores de Alarme",
+    "Verificação de Conectividade de Rede",
+    "Reaperto de Conexões",
+    "Teste de Sirene",
+    "Troca de Conectores",
+    "Configuração de Acesso Remoto"
+];
+
 let proximoOrcamentoId = 1;
 
 // Objeto temporário para Orçamento
@@ -26,14 +40,14 @@ let currentManutencao = {
     data: "",
     hora: "",
     tipo: "Preventiva",
-    itens: [] // Lista de testes/serviços realizados
+    itens: [] 
 };
 
 // Controles de Edição
 let isEditingItem = false;
 let editingItemIndex = -1;
 
-// Firebase variables (acessadas via window, definidas no index.html)
+// Variáveis de Controle do Firebase
 let firebaseUser = null;
 const firebaseStatusElement = document.getElementById('firebase-status');
 const firebaseCloudStatusElement = document.getElementById('firebase-cloud-status');
@@ -44,8 +58,8 @@ const firebaseCloudStatusElement = document.getElementById('firebase-cloud-statu
 // =======================================================
 document.addEventListener('DOMContentLoaded', function() {
     configurarEventListeners();
-    setupFirebaseAuthStateListener();
-    solicitarPermissaoNotificacao(); // Pede permissão para alertas logo ao abrir
+    setupFirebaseAuthStateListener(); // Agora usa a versão compatível robusta
+    solicitarPermissaoNotificacao(); 
     
     // Inicializar na aba Clientes
     showSection('clientes');
@@ -118,12 +132,12 @@ function configurarEventListeners() {
     document.getElementById('exportar-contratos-pdf-btn').addEventListener('click', exportarContratosPDF);
     document.getElementById('ativar-notificacoes-btn').addEventListener('click', solicitarPermissaoNotificacao);
 
-    // --- MANUTENÇÃO (NOVO) ---
+    // --- MANUTENÇÃO ---
     document.getElementById('adicionar-item-manutencao-btn').addEventListener('click', openItemManutencaoModal);
     document.querySelector('#itemManutencaoModal .close-modal').addEventListener('click', () => closeModal('itemManutencaoModal'));
     document.getElementById('salvar-item-manutencao-btn').addEventListener('click', adicionarItemManutencao);
     document.getElementById('salvar-novo-relatorio-btn').addEventListener('click', salvarRelatorioManutencao);
-    document.getElementById('gerar-relatorio-pdf-btn').addEventListener('click', () => gerarRelatorioPDF(false)); // Chama função no pdf-generator.js
+    document.getElementById('gerar-relatorio-pdf-btn').addEventListener('click', () => gerarRelatorioPDF(false));
 
     // Firebase Auth
     document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
@@ -134,32 +148,33 @@ function configurarEventListeners() {
 }
 
 // =======================================================
-// ========= FIREBASE & DATA HANDLING ====================
+// ========= FIREBASE & DATA HANDLING (CORRIGIDO) ========
 // =======================================================
 
-async function signInWithGoogle() {
-    try {
-        const provider = new window.GoogleAuthProvider();
-        await window.signInWithRedirect(window.firebaseAuth, provider);
-    } catch (error) {
-        console.error("Erro no login com Google: ", error);
-        updateFirebaseStatus('Erro de Conexão', 'red');
-        alert("Erro ao fazer login com Google: " + error.message);
-    }
+function signInWithGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider)
+        .then((result) => {
+            console.log("Logado com sucesso:", result.user);
+        })
+        .catch((error) => {
+            console.error("Erro no login com Google: ", error);
+            updateFirebaseStatus('Erro de Conexão', 'red');
+            alert("Erro ao fazer login com Google: " + error.message);
+        });
 }
 
-async function signOutGoogle() {
-    try {
-        await window.signOut(window.firebaseAuth);
-    } catch (error) {
+function signOutGoogle() {
+    firebase.auth().signOut().then(() => {
+        console.log("Desconectado com sucesso");
+    }).catch((error) => {
         console.error("Erro no logout: ", error);
-        updateFirebaseStatus('Erro ao Desconectar', 'red');
         alert("Erro ao fazer logout: " + error.message);
-    }
+    });
 }
 
 function setupFirebaseAuthStateListener() {
-    window.onAuthStateChanged(window.firebaseAuth, async (user) => {
+    firebase.auth().onAuthStateChanged((user) => {
         const loginBtn = document.getElementById('google-login-btn');
         const logoutBtn = document.getElementById('google-logout-btn');
 
@@ -171,7 +186,7 @@ function setupFirebaseAuthStateListener() {
             logoutBtn.style.backgroundColor = 'green';
             logoutBtn.style.borderColor = 'darkgreen';
             logoutBtn.innerHTML = '<i class="fas fa-check-circle"></i> LOGADO COM FIREBASE CLOUD';
-            await loadDataFromFirestore();
+            loadDataFromFirestore();
         } else {
             firebaseUser = null;
             updateFirebaseStatus('Desconectado', 'red');
@@ -185,71 +200,80 @@ function setupFirebaseAuthStateListener() {
     });
 }
 
-async function saveDataToFirestore() {
+function saveDataToFirestore() {
     if (!firebaseUser) {
         console.warn("Usuário não autenticado. Salvando apenas no Local Storage.");
-        salvarNoLocalStorage('clientes', clientes);
-        salvarNoLocalStorage('produtos', produtos);
-        salvarNoLocalStorage('orcamentos', orcamentos);
-        salvarNoLocalStorage('contratos', contratos);
-        salvarNoLocalStorage('manutencoes', manutencoes); // Novo
-        salvarNoLocalStorage('proximoOrcamentoId', proximoOrcamentoId);
-        salvarNoLocalStorage('currentOrcamento', currentOrcamento);
+        salvarLocalmenteTudo();
         return;
     }
 
     updateFirebaseStatus('Sincronizando...', 'orange');
-    try {
-        const userDocRef = window.firebaseDoc(window.firebaseDb, 'users', firebaseUser.uid);
-        await window.firebaseSetDoc(userDocRef, {
-            clientes: clientes,
-            produtos: produtos,
-            orcamentos: orcamentos,
-            contratos: contratos,
-            manutencoes: manutencoes,
-            proximoOrcamentoId: proximoOrcamentoId,
-            currentOrcamento: currentOrcamento
-        });
+    
+    // Referência ao documento do usuário (versão compat/v8)
+    const userDocRef = firebase.firestore().collection('users').doc(firebaseUser.uid);
+    
+    userDocRef.set({
+        clientes: clientes,
+        produtos: produtos,
+        orcamentos: orcamentos,
+        contratos: contratos,
+        manutencoes: manutencoes,
+        bancoServicos: bancoServicos, 
+        proximoOrcamentoId: proximoOrcamentoId,
+        currentOrcamento: currentOrcamento
+    })
+    .then(() => {
         updateFirebaseStatus('Conectado', 'green');
-    } catch (error) {
+        salvarLocalmenteTudo(); // Backup local
+    })
+    .catch((error) => {
         console.error("Erro ao salvar dados no Firestore: ", error);
         updateFirebaseStatus('Erro de Conexão', 'red');
-        alert("Erro ao salvar dados no Firebase. Verifique sua conexão ou tente novamente.");
-    }
+        alert("Erro ao salvar dados no Firebase. Verifique sua conexão.");
+    });
 }
 
-async function loadDataFromFirestore() {
+function salvarLocalmenteTudo() {
+    salvarNoLocalStorage('clientes', clientes);
+    salvarNoLocalStorage('produtos', produtos);
+    salvarNoLocalStorage('orcamentos', orcamentos);
+    salvarNoLocalStorage('contratos', contratos);
+    salvarNoLocalStorage('manutencoes', manutencoes);
+    salvarNoLocalStorage('bancoServicos', bancoServicos);
+    salvarNoLocalStorage('proximoOrcamentoId', proximoOrcamentoId);
+    salvarNoLocalStorage('currentOrcamento', currentOrcamento);
+}
+
+function loadDataFromFirestore() {
     if (!firebaseUser) {
         loadDataFromLocalStorage();
         return;
     }
 
     updateFirebaseStatus('Conectando...', 'orange');
-    try {
-        const userDocRef = window.firebaseDoc(window.firebaseDb, 'users', firebaseUser.uid);
-        const docSnap = await window.firebaseGetDoc(userDocRef);
+    const userDocRef = firebase.firestore().collection('users').doc(firebaseUser.uid);
 
-        if (docSnap.exists()) {
-            const data = docSnap.data();
+    userDocRef.get().then((doc) => {
+        if (doc.exists) {
+            const data = doc.data();
             clientes = data.clientes || [];
             produtos = data.produtos || [];
             orcamentos = data.orcamentos || [];
             contratos = data.contratos || [];
-            manutencoes = data.manutencoes || []; // Novo
+            manutencoes = data.manutencoes || [];
+            bancoServicos = data.bancoServicos || bancoServicos; 
             proximoOrcamentoId = data.proximoOrcamentoId || 1;
             currentOrcamento = data.currentOrcamento || { id: generateSequentialId(true), clienteId: null, itens: [], maoDeObra: 0, relatorio: "", formasPagamento: "", servicos: "" };
             updateFirebaseStatus('Conectado', 'green');
         } else {
             updateFirebaseStatus('Nenhum dado na nuvem', 'blue');
-            resetData();
         }
         carregarDadosIniciais(); 
-    } catch (error) {
+    }).catch((error) => {
         console.error("Erro ao carregar dados do Firestore: ", error);
         updateFirebaseStatus('Erro de Conexão', 'red');
-        alert("Erro ao carregar dados do Firebase. Carregando dados locais. " + error.message);
         loadDataFromLocalStorage(); 
-    }
+    });
 }
 
 function salvarNoLocalStorage(key, data) {
@@ -262,6 +286,12 @@ function loadDataFromLocalStorage() {
     orcamentos = JSON.parse(localStorage.getItem('orcamentos')) || [];
     contratos = JSON.parse(localStorage.getItem('contratos')) || [];
     manutencoes = JSON.parse(localStorage.getItem('manutencoes')) || [];
+    
+    const savedServicos = JSON.parse(localStorage.getItem('bancoServicos'));
+    if (savedServicos && savedServicos.length > 0) {
+        bancoServicos = savedServicos;
+    }
+
     proximoOrcamentoId = parseInt(localStorage.getItem('proximoOrcamentoId')) || 1;
     currentOrcamento = JSON.parse(localStorage.getItem('currentOrcamento')) || {
         id: generateSequentialId(true),
@@ -271,23 +301,11 @@ function loadDataFromLocalStorage() {
     carregarDadosIniciais();
 }
 
-function resetData() {
-    clientes = []; produtos = []; orcamentos = []; contratos = []; manutencoes = [];
-    proximoOrcamentoId = 1;
-    currentOrcamento = { id: generateSequentialId(true), clienteId: null, itens: [], maoDeObra: 0, relatorio: "", formasPagamento: "", servicos: "" };
-}
-
 function saveData() {
     if (firebaseUser) {
         saveDataToFirestore();
     } else {
-        salvarNoLocalStorage('clientes', clientes);
-        salvarNoLocalStorage('produtos', produtos);
-        salvarNoLocalStorage('orcamentos', orcamentos);
-        salvarNoLocalStorage('contratos', contratos);
-        salvarNoLocalStorage('manutencoes', manutencoes);
-        salvarNoLocalStorage('proximoOrcamentoId', proximoOrcamentoId);
-        salvarNoLocalStorage('currentOrcamento', currentOrcamento);
+        salvarLocalmenteTudo();
         updateFirebaseStatus('Salvo Localmente. Conecte-se para salvar na nuvem.', 'blue');
     }
 }
@@ -297,14 +315,12 @@ function carregarDadosIniciais() {
     renderizarProdutosPorCategoria();
     carregarOrcamentoAtual();
     renderizarOrcamentosSalvos();
-    
     renderizarContratos();
     verificarAlertasReajuste();
-    
-    // Inicializar Manutenção
     carregarClientesNoSelect('manutencao-cliente');
     iniciarNovoRelatorioManutencao();
     renderizarRelatoriosSalvos();
+    atualizarDatalistServicos(); 
 }
 
 function updateFirebaseStatus(message, color) {
@@ -330,7 +346,10 @@ function showSection(sectionId) {
     if(section) section.classList.add('active');
 
     if (sectionId === 'orcamentos') carregarClientesNoSelect('orcamento-cliente');
-    if (sectionId === 'manutencao') carregarClientesNoSelect('manutencao-cliente');
+    if (sectionId === 'manutencao') {
+        carregarClientesNoSelect('manutencao-cliente');
+        atualizarDatalistServicos();
+    }
     if (sectionId === 'produtos') renderizarProdutosPorCategoria();
     
     if (sectionId === 'contratos') {
@@ -1233,7 +1252,7 @@ function exportarContratosPDF() {
 }
 
 // =======================================================
-// ========= RELATÓRIOS DE MANUTENÇÃO (NOVO) =============
+// ========= RELATÓRIOS DE MANUTENÇÃO (COMPLETO) =========
 // =======================================================
 
 function iniciarNovoRelatorioManutencao() {
@@ -1261,14 +1280,44 @@ function openItemManutencaoModal() {
     openModal('itemManutencaoModal');
 }
 
+// --- FUNÇÃO DE AUTOCOMPLETAR ---
+function atualizarDatalistServicos() {
+    const datalist = document.getElementById('lista-sugestoes-servicos');
+    if (!datalist) return;
+    
+    datalist.innerHTML = ''; // Limpa anterior
+    // Ordena alfabeticamente para ficar bonito
+    bancoServicos.sort();
+    
+    bancoServicos.forEach(servico => {
+        const option = document.createElement('option');
+        option.value = servico;
+        datalist.appendChild(option);
+    });
+}
+
+// --- FUNÇÃO ADICIONAR ITEM ---
 function adicionarItemManutencao() {
-    const descricao = document.getElementById('manutencao-descricao-servico').value;
+    const descricaoInput = document.getElementById('manutencao-descricao-servico');
+    const descricao = descricaoInput.value.trim(); // Remove espaços extras
     const status = document.getElementById('manutencao-status-servico').value;
     const obs = document.getElementById('manutencao-obs-extra').value;
 
     if(!descricao) {
         alert("Descreva o serviço ou teste realizado.");
         return;
+    }
+
+    // LÓGICA DE APRENDIZADO (BANCO DE DADOS)
+    const existe = bancoServicos.some(s => s.toLowerCase() === descricao.toLowerCase());
+    
+    if (!existe) {
+        // Adiciona ao banco de memória
+        bancoServicos.push(descricao);
+        // Atualiza a lista visual imediatamente
+        atualizarDatalistServicos();
+        // Salva essa nova memória no banco de dados (nuvem ou local)
+        saveData(); 
     }
 
     const novoItem = {
