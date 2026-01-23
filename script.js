@@ -4,10 +4,11 @@
 let clientes = [];
 let produtos = [];
 let orcamentos = [];
-let contratos = []; 
-let transacoes = []; 
+let contratos = [];
+let manutencoes = []; // Nova lista de relatórios
 let proximoOrcamentoId = 1;
 
+// Objeto temporário para Orçamento
 let currentOrcamento = {
     id: generateSequentialId(true),
     clienteId: null,
@@ -17,14 +18,22 @@ let currentOrcamento = {
     formasPagamento: "",
     servicos: "",
 };
+
+// Objeto temporário para Relatório de Manutenção
+let currentManutencao = {
+    id: null,
+    clienteId: "",
+    data: "",
+    hora: "",
+    tipo: "Preventiva",
+    itens: [] // Lista de testes/serviços realizados
+};
+
+// Controles de Edição
 let isEditingItem = false;
 let editingItemIndex = -1;
 
-// Variáveis para o Financeiro
-let financeiroChartInstance = null;
-let currentFinanceiroDate = new Date();
-
-// Firebase variables
+// Firebase variables (acessadas via window, definidas no index.html)
 let firebaseUser = null;
 const firebaseStatusElement = document.getElementById('firebase-status');
 const firebaseCloudStatusElement = document.getElementById('firebase-cloud-status');
@@ -36,10 +45,10 @@ const firebaseCloudStatusElement = document.getElementById('firebase-cloud-statu
 document.addEventListener('DOMContentLoaded', function() {
     configurarEventListeners();
     setupFirebaseAuthStateListener();
+    solicitarPermissaoNotificacao(); // Pede permissão para alertas logo ao abrir
     
-    // Inicializar
+    // Inicializar na aba Clientes
     showSection('clientes');
-    preencherSelectsDataFinanceiro();
     
     const currentYearSpan = document.getElementById('current-year');
     if (currentYearSpan) {
@@ -59,27 +68,24 @@ function configurarEventListeners() {
         });
     });
 
-    // Aba Clientes
+    // --- CLIENTES ---
     document.getElementById('cliente-form').addEventListener('submit', (e) => {
         e.preventDefault();
         salvarENovoCliente();
     });
     document.querySelector('#cliente-details-modal .close-modal').addEventListener('click', () => closeModal('cliente-details-modal'));
 
-    // Aba Produtos
+    // --- PRODUTOS ---
     document.getElementById('produto-form').addEventListener('submit', (e) => {
         e.preventDefault();
         salvarENovoProduto();
     });
     document.getElementById('close-produtos-categoria-modal').addEventListener('click', closeProdutosCategoriaModal);
 
-    // Aba Orçamentos
+    // --- ORÇAMENTOS ---
     document.getElementById('orcamento-form').addEventListener('input', salvarDadosOrcamento);
     document.getElementById('adicionar-item-btn').addEventListener('click', () => openItemModal(-1, 'current'));
-    
-    // Botão Gerar PDF do formulário (Força download = false no preview)
-    document.getElementById('gerar-pdf-btn').addEventListener('click', () => gerarPDF(false));
-    
+    document.getElementById('gerar-pdf-btn').addEventListener('click', () => gerarPDF(false)); // PDF Orçamento
     document.getElementById('salvar-novo-orcamento-btn').addEventListener('click', salvarENovoOrcamento);
     
     // Modal Item Orçamento
@@ -95,7 +101,7 @@ function configurarEventListeners() {
         const valorInput = document.getElementById('modal-valor');
         if (selectedOption && selectedOption.dataset.valor) {
             valorInput.value = parseFloat(selectedOption.dataset.valor).toFixed(2);
-        } else if (!isEditingItem || (isEditingItem && !modalProdutoSelect.value)) {
+        } else if (!isEditingItem || (isEditingItem && !selectModalProduto.value)) {
             valorInput.value = '';
         }
     });
@@ -105,30 +111,19 @@ function configurarEventListeners() {
     document.getElementById('save-orcamento-changes-btn').addEventListener('click', salvarAlteracoesOrcamentoPeloModal);
     document.getElementById('add-item-to-edited-orcamento-btn').addEventListener('click', () => openItemModal(-1, 'edit'));
 
-    // Aba Contratos
+    // --- CONTRATOS ---
     document.getElementById('novo-contrato-btn').addEventListener('click', () => openNovoContratoModal());
     document.querySelector('#novoContratoModal .close-modal').addEventListener('click', () => closeModal('novoContratoModal'));
     document.getElementById('salvar-contrato-btn').addEventListener('click', salvarContrato);
     document.getElementById('exportar-contratos-pdf-btn').addEventListener('click', exportarContratosPDF);
+    document.getElementById('ativar-notificacoes-btn').addEventListener('click', solicitarPermissaoNotificacao);
 
-    // Aba Financeiro
-    document.getElementById('nova-receita-btn').addEventListener('click', () => openNovaTransacaoModal('receita'));
-    document.getElementById('nova-despesa-btn').addEventListener('click', () => openNovaTransacaoModal('despesa'));
-    document.querySelector('#novaTransacaoModal .close-modal').addEventListener('click', () => closeModal('novaTransacaoModal'));
-    document.getElementById('salvar-transacao-btn').addEventListener('click', salvarTransacao);
-    document.getElementById('filtrar-financeiro-btn').addEventListener('click', atualizarDashboardFinanceiro);
-    document.getElementById('exportar-financeiro-btn').addEventListener('click', exportarRelatorioFinanceiroPDF);
-    
-    // NOVA FUNCIONALIDADE: Transferência
-    document.getElementById('nova-transferencia-btn').addEventListener('click', () => openModal('novaTransferenciaModal'));
-    document.querySelector('#novaTransferenciaModal .close-modal').addEventListener('click', () => closeModal('novaTransferenciaModal'));
-    document.getElementById('salvar-transferencia-btn').addEventListener('click', salvarTransferencia);
-
-    // Listener dinâmico financeiro (Contrato Select)
-    document.getElementById('transacao-categoria').addEventListener('change', function() {
-        const isContrato = this.value === 'contrato';
-        document.getElementById('group-contrato-select').style.display = isContrato ? 'block' : 'none';
-    });
+    // --- MANUTENÇÃO (NOVO) ---
+    document.getElementById('adicionar-item-manutencao-btn').addEventListener('click', openItemManutencaoModal);
+    document.querySelector('#itemManutencaoModal .close-modal').addEventListener('click', () => closeModal('itemManutencaoModal'));
+    document.getElementById('salvar-item-manutencao-btn').addEventListener('click', adicionarItemManutencao);
+    document.getElementById('salvar-novo-relatorio-btn').addEventListener('click', salvarRelatorioManutencao);
+    document.getElementById('gerar-relatorio-pdf-btn').addEventListener('click', () => gerarRelatorioPDF(false)); // Chama função no pdf-generator.js
 
     // Firebase Auth
     document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
@@ -145,7 +140,6 @@ function configurarEventListeners() {
 async function signInWithGoogle() {
     try {
         const provider = new window.GoogleAuthProvider();
-        // MODIFICADO: Usar redirecionamento para funcionar no PWA/Mobile
         await window.signInWithRedirect(window.firebaseAuth, provider);
     } catch (error) {
         console.error("Erro no login com Google: ", error);
@@ -198,7 +192,7 @@ async function saveDataToFirestore() {
         salvarNoLocalStorage('produtos', produtos);
         salvarNoLocalStorage('orcamentos', orcamentos);
         salvarNoLocalStorage('contratos', contratos);
-        salvarNoLocalStorage('transacoes', transacoes);
+        salvarNoLocalStorage('manutencoes', manutencoes); // Novo
         salvarNoLocalStorage('proximoOrcamentoId', proximoOrcamentoId);
         salvarNoLocalStorage('currentOrcamento', currentOrcamento);
         return;
@@ -212,7 +206,7 @@ async function saveDataToFirestore() {
             produtos: produtos,
             orcamentos: orcamentos,
             contratos: contratos,
-            transacoes: transacoes,
+            manutencoes: manutencoes,
             proximoOrcamentoId: proximoOrcamentoId,
             currentOrcamento: currentOrcamento
         });
@@ -241,7 +235,7 @@ async function loadDataFromFirestore() {
             produtos = data.produtos || [];
             orcamentos = data.orcamentos || [];
             contratos = data.contratos || [];
-            transacoes = data.transacoes || [];
+            manutencoes = data.manutencoes || []; // Novo
             proximoOrcamentoId = data.proximoOrcamentoId || 1;
             currentOrcamento = data.currentOrcamento || { id: generateSequentialId(true), clienteId: null, itens: [], maoDeObra: 0, relatorio: "", formasPagamento: "", servicos: "" };
             updateFirebaseStatus('Conectado', 'green');
@@ -267,7 +261,7 @@ function loadDataFromLocalStorage() {
     produtos = JSON.parse(localStorage.getItem('produtos')) || [];
     orcamentos = JSON.parse(localStorage.getItem('orcamentos')) || [];
     contratos = JSON.parse(localStorage.getItem('contratos')) || [];
-    transacoes = JSON.parse(localStorage.getItem('transacoes')) || [];
+    manutencoes = JSON.parse(localStorage.getItem('manutencoes')) || [];
     proximoOrcamentoId = parseInt(localStorage.getItem('proximoOrcamentoId')) || 1;
     currentOrcamento = JSON.parse(localStorage.getItem('currentOrcamento')) || {
         id: generateSequentialId(true),
@@ -278,7 +272,7 @@ function loadDataFromLocalStorage() {
 }
 
 function resetData() {
-    clientes = []; produtos = []; orcamentos = []; contratos = []; transacoes = [];
+    clientes = []; produtos = []; orcamentos = []; contratos = []; manutencoes = [];
     proximoOrcamentoId = 1;
     currentOrcamento = { id: generateSequentialId(true), clienteId: null, itens: [], maoDeObra: 0, relatorio: "", formasPagamento: "", servicos: "" };
 }
@@ -291,7 +285,7 @@ function saveData() {
         salvarNoLocalStorage('produtos', produtos);
         salvarNoLocalStorage('orcamentos', orcamentos);
         salvarNoLocalStorage('contratos', contratos);
-        salvarNoLocalStorage('transacoes', transacoes);
+        salvarNoLocalStorage('manutencoes', manutencoes);
         salvarNoLocalStorage('proximoOrcamentoId', proximoOrcamentoId);
         salvarNoLocalStorage('currentOrcamento', currentOrcamento);
         updateFirebaseStatus('Salvo Localmente. Conecte-se para salvar na nuvem.', 'blue');
@@ -306,8 +300,11 @@ function carregarDadosIniciais() {
     
     renderizarContratos();
     verificarAlertasReajuste();
-    gerarDespesasRecorrentesAutomaticas();
-    atualizarDashboardFinanceiro();
+    
+    // Inicializar Manutenção
+    carregarClientesNoSelect('manutencao-cliente');
+    iniciarNovoRelatorioManutencao();
+    renderizarRelatoriosSalvos();
 }
 
 function updateFirebaseStatus(message, color) {
@@ -333,16 +330,12 @@ function showSection(sectionId) {
     if(section) section.classList.add('active');
 
     if (sectionId === 'orcamentos') carregarClientesNoSelect('orcamento-cliente');
+    if (sectionId === 'manutencao') carregarClientesNoSelect('manutencao-cliente');
     if (sectionId === 'produtos') renderizarProdutosPorCategoria();
     
-    // Novas Abas
     if (sectionId === 'contratos') {
         renderizarContratos();
         verificarAlertasReajuste();
-    }
-    if (sectionId === 'financeiro') {
-        atualizarDashboardFinanceiro();
-        if(financeiroChartInstance) financeiroChartInstance.resize();
     }
 }
 
@@ -423,6 +416,7 @@ function renderizarClientes() {
     });
     
     carregarClientesNoSelect('orcamento-cliente');
+    carregarClientesNoSelect('manutencao-cliente');
 }
 
 function abrirModalDetalhesCliente(id) {
@@ -608,7 +602,11 @@ function carregarClientesNoSelect(selectId) {
     if (!select) return;
     const clienteSelecionado = select.value;
     select.innerHTML = '<option value="">Selecione um cliente...</option>';
-    clientes.forEach(c => {
+    
+    // Ordenar clientes alfabeticamente
+    const clientesOrdenados = [...clientes].sort((a, b) => a.nome.localeCompare(b.nome));
+    
+    clientesOrdenados.forEach(c => {
         select.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
     });
     if (clientes.find(c => c.id === clienteSelecionado)) {
@@ -1004,10 +1002,11 @@ function openNovoContratoModal(contratoId = null) {
     form.reset();
     document.getElementById('contrato-id').value = '';
     
-    // Carrega clientes
+    // Carrega clientes (ordenados)
     const select = document.getElementById('contrato-cliente');
     select.innerHTML = '<option value="">Selecione um cliente...</option>';
-    clientes.forEach(c => {
+    const clientesOrdenados = [...clientes].sort((a, b) => a.nome.localeCompare(b.nome));
+    clientesOrdenados.forEach(c => {
         select.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
     });
 
@@ -1077,6 +1076,18 @@ function renderizarContratos() {
         return;
     }
 
+    // 1. Ordenação: Dia de Vencimento (Crescente) -> Nome do Cliente (A-Z)
+    contratos.sort((a, b) => {
+        if (a.diaVencimento !== b.diaVencimento) {
+            return a.diaVencimento - b.diaVencimento;
+        }
+        const clienteA = clientes.find(c => c.id === a.clienteId);
+        const clienteB = clientes.find(c => c.id === b.clienteId);
+        const nomeA = clienteA ? clienteA.nome : "";
+        const nomeB = clienteB ? clienteB.nome : "";
+        return nomeA.localeCompare(nomeB);
+    });
+
     contratos.forEach(c => {
         const cliente = clientes.find(cli => cli.id === c.clienteId);
         const nomeCliente = cliente ? cliente.nome : 'Cliente Removido';
@@ -1084,12 +1095,12 @@ function renderizarContratos() {
         
         tbody.innerHTML += `
             <tr style="opacity: ${c.ativo ? 1 : 0.6}">
+                <td style="font-weight: bold; color: var(--cor-destaque-primaria);">Dia ${c.diaVencimento}</td>
                 <td>${nomeCliente}</td>
                 <td>${c.descricao}</td>
                 <td>${formatarMoeda(c.valor)}</td>
-                <td>Dia ${c.diaVencimento}</td>
                 <td>${nomesMeses[c.mesReajuste]}</td>
-                <td>${c.ativo ? '<span class="status-badge status-pago">Ativo</span>' : '<span class="status-badge status-pendente">Inativo</span>'}</td>
+                <td>${c.ativo ? '<span class="status-badge status-ativo">Ativo</span>' : '<span class="status-badge status-inativo">Inativo</span>'}</td>
                 <td>
                     <button class="btn-editar btn-sm" onclick="openNovoContratoModal('${c.id}')"><i class="fas fa-edit"></i></button>
                     <button class="btn-excluir btn-sm" onclick="excluirContrato('${c.id}')"><i class="fas fa-trash-alt"></i></button>
@@ -1108,6 +1119,25 @@ function excluirContrato(id) {
     }
 }
 
+// LÓGICA DE NOTIFICAÇÃO E ALERTAS
+function solicitarPermissaoNotificacao() {
+    if (!("Notification" in window)) {
+        console.log("Este navegador não suporta notificações de desktop");
+        return;
+    }
+
+    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission().then(function (permission) {
+            if (permission === "granted") {
+                new Notification("Grupo Henri Sistemas", {
+                    body: "Notificações ativadas! Você será avisado sobre reajustes de contratos.",
+                    icon: "assets/icone.png"
+                });
+            }
+        });
+    }
+}
+
 function verificarAlertasReajuste() {
     const container = document.getElementById('alertas-reajuste-container');
     container.innerHTML = '';
@@ -1119,18 +1149,38 @@ function verificarAlertasReajuste() {
         container.style.display = 'block';
         contratosReajuste.forEach(c => {
             const cliente = clientes.find(cli => cli.id === c.clienteId);
+            const nomeCliente = cliente ? cliente.nome : 'Cliente';
+            
+            // Cria elemento visual
             container.innerHTML += `
                 <div class="alert-box">
-                    <i class="fas fa-exclamation-circle"></i>
+                    <i class="fas fa-bell"></i>
                     <div>
                         <strong>Atenção Reajuste!</strong><br>
-                        O contrato de <strong>${cliente ? cliente.nome : 'Cliente'}</strong> deve ser reajustado este mês.
+                        O contrato de <strong>${nomeCliente}</strong> deve ser reajustado este mês.
                     </div>
                 </div>
             `;
+            
+            // Envia notificação do sistema (Browser Notification)
+            enviarNotificacaoReajuste(nomeCliente);
         });
     } else {
         container.style.display = 'none';
+    }
+}
+
+function enviarNotificacaoReajuste(nomeCliente) {
+    if (Notification.permission === "granted") {
+        // Verifica se já notificamos hoje para não fazer spam (usando sessionStorage)
+        const key = `notified_${nomeCliente}_${new Date().getMonth()}`;
+        if (!sessionStorage.getItem(key)) {
+            new Notification("Lembrete de Reajuste", {
+                body: `O contrato de ${nomeCliente} precisa de reajuste este mês!`,
+                icon: "assets/icone.png"
+            });
+            sessionStorage.setItem(key, "true");
+        }
     }
 }
 
@@ -1145,17 +1195,25 @@ function exportarContratosPDF() {
     doc.setTextColor(100);
     doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 28);
 
-    const tableColumn = ["Cliente", "Descrição", "Valor", "Vencimento", "Reajuste", "Status"];
+    const tableColumn = ["Dia Venc.", "Cliente", "Descrição", "Valor", "Reajuste", "Status"];
     const tableRows = [];
 
-    contratos.forEach(c => {
+    // Usa a mesma ordenação da tela
+    const contratosExport = [...contratos].sort((a, b) => {
+        if (a.diaVencimento !== b.diaVencimento) return a.diaVencimento - b.diaVencimento;
+        const cA = clientes.find(c => c.id === a.clienteId);
+        const cB = clientes.find(c => c.id === b.clienteId);
+        return (cA ? cA.nome : "").localeCompare(cB ? cB.nome : "");
+    });
+
+    contratosExport.forEach(c => {
         const cliente = clientes.find(cli => cli.id === c.clienteId);
         const nomesMeses = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
         const rowData = [
+            `Dia ${c.diaVencimento}`,
             cliente ? cliente.nome : 'N/A',
             c.descricao,
             formatarMoeda(c.valor),
-            `Dia ${c.diaVencimento}`,
             nomesMeses[c.mesReajuste],
             c.ativo ? 'Ativo' : 'Inativo'
         ];
@@ -1175,561 +1233,182 @@ function exportarContratosPDF() {
 }
 
 // =======================================================
-// ========= GESTÃO FINANCEIRA ===========================
+// ========= RELATÓRIOS DE MANUTENÇÃO (NOVO) =============
 // =======================================================
 
-function preencherSelectsDataFinanceiro() {
-    const selectMes = document.getElementById('financeiro-mes');
-    const selectAno = document.getElementById('financeiro-ano');
-    const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+function iniciarNovoRelatorioManutencao() {
+    // Reseta objeto temporário
+    currentManutencao = {
+        id: generateSequentialId(true) + "-MAN", // ID único com sufixo
+        clienteId: "",
+        data: new Date().toISOString().split('T')[0],
+        hora: new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}),
+        tipo: "Preventiva",
+        itens: [] 
+    };
     
-    meses.forEach((m, index) => {
-        selectMes.innerHTML += `<option value="${index}" ${index === currentFinanceiroDate.getMonth() ? 'selected' : ''}>${m}</option>`;
-    });
-
-    const anoAtual = new Date().getFullYear();
-    for(let i = anoAtual - 2; i <= anoAtual + 2; i++) {
-        selectAno.innerHTML += `<option value="${i}" ${i === anoAtual ? 'selected' : ''}>${i}</option>`;
-    }
+    // Reseta formulário
+    document.getElementById('manutencao-cliente').value = "";
+    document.getElementById('manutencao-data').value = currentManutencao.data;
+    document.getElementById('manutencao-hora').value = currentManutencao.hora;
+    document.getElementById('manutencao-tipo').value = "Preventiva";
+    
+    renderizarItensManutencao();
 }
 
-function openNovaTransacaoModal(tipo, transacaoId = null) {
-    const form = document.getElementById('nova-transacao-form');
-    form.reset();
-    document.getElementById('transacao-id').value = '';
-    document.getElementById('transacao-tipo').value = tipo;
-    
-    const titulo = document.getElementById('modal-transacao-titulo');
-    const selectCategoria = document.getElementById('transacao-categoria');
-    const selectContrato = document.getElementById('transacao-contrato-id');
-    const groupContrato = document.getElementById('group-contrato-select');
-    const groupRecorrente = document.getElementById('group-recorrente');
-    const selectConta = document.getElementById('transacao-conta'); // Select de Conta
-    
-    titulo.textContent = tipo === 'receita' ? 'Nova Receita (Entrada)' : 'Nova Despesa (Saída)';
-    
-    // Categorias Dinâmicas e Restrição de Caixa
-    selectCategoria.innerHTML = '';
-    
-    // Reseta as opções de conta
-    selectConta.innerHTML = `
-        <option value="pj">Pessoa Jurídica (PJ)</option>
-        <option value="pf">Pessoa Física (PF)</option>
-        <option value="caixa">Caixa Empresa</option>
-    `;
-
-    if (tipo === 'receita') {
-        selectCategoria.innerHTML = `
-            <option value="contrato">Contrato (Mensalidade)</option>
-            <option value="venda">Venda Avulsa</option>
-            <option value="instalacao">Instalação</option>
-            <option value="outros">Outros</option>
-        `;
-        selectContrato.innerHTML = '<option value="">Selecione...</option>';
-        contratos.filter(c => c.ativo).forEach(c => {
-            const cli = clientes.find(cl => cl.id === c.clienteId);
-            selectContrato.innerHTML += `<option value="${c.id}">${cli ? cli.nome : 'N/A'} - ${c.descricao}</option>`;
-        });
-        groupRecorrente.style.display = 'none';
-        
-        // REGRA DE NEGÓCIO: Não permite entrada direta no Caixa
-        // Remove a opção 'caixa' se for Receita
-        const opCaixa = selectConta.querySelector('option[value="caixa"]');
-        if (opCaixa) opCaixa.remove();
-
-    } else {
-        selectCategoria.innerHTML = `
-            <option value="fornecedor">Boleto Fornecedor</option>
-            <option value="despesa_empresa">Despesa Empresa (Geral)</option>
-            <option value="fixa_pf">Despesa Fixa PF</option>
-            <option value="variavel_pf">Despesa Variável PF</option>
-        `;
-        groupContrato.style.display = 'none';
-        groupRecorrente.style.display = 'block';
-    }
-
-    document.getElementById('transacao-data').value = new Date().toISOString().split('T')[0];
-
-    // Edição
-    if (transacaoId) {
-        const t = transacoes.find(x => x.id === transacaoId);
-        if (t) {
-            document.getElementById('transacao-id').value = t.id;
-            document.getElementById('transacao-tipo').value = t.tipo;
-            selectCategoria.value = t.categoria;
-            document.getElementById('transacao-descricao').value = t.descricao;
-            document.getElementById('transacao-valor').value = t.valor;
-            document.getElementById('transacao-data').value = t.data;
-            
-            // Se for edição e tiver caixa (pode ser uma transação antiga), recoloca a opção
-            if (t.conta === 'caixa' && tipo === 'receita') {
-                 selectConta.innerHTML += '<option value="caixa">Caixa Empresa</option>';
-            }
-            selectConta.value = t.conta;
-            
-            document.getElementById('transacao-status').value = t.status;
-            if(t.contratoId) {
-                selectContrato.value = t.contratoId;
-                groupContrato.style.display = 'block';
-            }
-            if(t.recorrente) document.getElementById('transacao-recorrente').checked = true;
-        }
-    } else {
-        selectCategoria.dispatchEvent(new Event('change'));
-    }
-
-    openModal('novaTransacaoModal');
+function openItemManutencaoModal() {
+    document.getElementById('item-manutencao-form').reset();
+    openModal('itemManutencaoModal');
 }
 
-function salvarTransacao() {
-    const id = document.getElementById('transacao-id').value;
-    const tipo = document.getElementById('transacao-tipo').value;
-    const categoria = document.getElementById('transacao-categoria').value;
-    const contratoId = (tipo === 'receita' && categoria === 'contrato') ? document.getElementById('transacao-contrato-id').value : null;
-    const descricao = document.getElementById('transacao-descricao').value;
-    const valor = parseFloat(document.getElementById('transacao-valor').value);
-    const data = document.getElementById('transacao-data').value;
-    const conta = document.getElementById('transacao-conta').value;
-    const status = document.getElementById('transacao-status').value;
-    const recorrente = (tipo === 'despesa') ? document.getElementById('transacao-recorrente').checked : false;
+function adicionarItemManutencao() {
+    const descricao = document.getElementById('manutencao-descricao-servico').value;
+    const status = document.getElementById('manutencao-status-servico').value;
+    const obs = document.getElementById('manutencao-obs-extra').value;
 
-    if (!descricao || isNaN(valor) || !data) {
-        alert('Preencha os campos obrigatórios.');
+    if(!descricao) {
+        alert("Descreva o serviço ou teste realizado.");
         return;
     }
 
-    const transacaoData = {
-        id: id || generateAlphanumericUniqueId(),
-        tipo,
-        categoria,
-        contratoId,
-        descricao,
-        valor,
-        data,
-        conta, // pj, pf, caixa
-        status, // pendente, pago
-        recorrente,
-        originalRecorrenteId: null
+    const novoItem = {
+        descricao: descricao,
+        status: status,
+        obs: obs
     };
 
-    if (id) {
-        const index = transacoes.findIndex(t => t.id === id);
-        if (index !== -1) transacoes[index] = { ...transacoes[index], ...transacaoData };
-    } else {
-        transacoes.push(transacaoData);
-    }
-
-    saveData();
-    atualizarDashboardFinanceiro();
-    closeModal('novaTransacaoModal');
+    currentManutencao.itens.push(novoItem);
+    renderizarItensManutencao();
+    closeModal('itemManutencaoModal');
 }
 
-// NOVA FUNÇÃO: SALVAR TRANSFERÊNCIA
-function salvarTransferencia() {
-    const origem = document.getElementById('transf-origem').value;
-    const destino = document.getElementById('transf-destino').value;
-    const valor = parseFloat(document.getElementById('transf-valor').value);
-    const data = document.getElementById('transf-data').value;
-    const obs = document.getElementById('transf-obs').value.trim();
-
-    if (isNaN(valor) || valor <= 0) {
-        alert("O valor da transferência deve ser maior que zero.");
-        return;
-    }
-    if (origem === destino) {
-        alert("A conta de origem e destino não podem ser iguais.");
-        return;
-    }
-    if (!data) {
-        alert("Selecione uma data.");
-        return;
-    }
-
-    // Nomes legíveis para descrição
-    const nomesContas = {
-        'pj': 'PJ',
-        'pf': 'PF',
-        'caixa': 'Caixa'
-    };
-
-    // Cria transação de SAÍDA (Despesa) na Origem
-    const saida = {
-        id: generateAlphanumericUniqueId(),
-        tipo: 'despesa',
-        categoria: 'transferencia_saida',
-        descricao: `TRF Enviada para ${nomesContas[destino]} ${obs ? '('+obs+')' : ''}`,
-        valor: valor,
-        data: data,
-        conta: origem,
-        status: 'pago', // Transferências internas geralmente são imediatas
-        recorrente: false
-    };
-
-    // Cria transação de ENTRADA (Receita) no Destino
-    const entrada = {
-        id: generateAlphanumericUniqueId(),
-        tipo: 'receita',
-        categoria: 'transferencia_entrada',
-        descricao: `TRF Recebida de ${nomesContas[origem]} ${obs ? '('+obs+')' : ''}`,
-        valor: valor,
-        data: data,
-        conta: destino,
-        status: 'pago',
-        recorrente: false
-    };
-
-    // Salva ambas
-    transacoes.push(saida);
-    transacoes.push(entrada);
-
-    saveData();
-    atualizarDashboardFinanceiro();
-    closeModal('novaTransferenciaModal');
-    alert('Transferência realizada com sucesso!');
-}
-
-function gerarDespesasRecorrentesAutomaticas() {
-    const recorrentes = transacoes.filter(t => t.recorrente && t.tipo === 'despesa');
-    const hoje = new Date();
-    const mesAtual = hoje.getMonth();
-    const anoAtual = hoje.getFullYear();
-    let mudancas = false;
-
-    recorrentes.forEach(origem => {
-        const jaExisteEsteMes = transacoes.some(t => {
-            if (!t.data) return false;
-            const tDate = new Date(t.data);
-            return t.descricao === origem.descricao && t.valor === origem.valor && tDate.getMonth() === mesAtual && tDate.getFullYear() === anoAtual;
-        });
-
-        if (!jaExisteEsteMes) {
-            const diaOriginal = new Date(origem.data).getDate();
-            const novaData = new Date(anoAtual, mesAtual, diaOriginal);
-            
-            const novaTransacao = {
-                ...origem,
-                id: generateAlphanumericUniqueId(),
-                data: novaData.toISOString().split('T')[0],
-                status: 'pendente',
-                originalRecorrenteId: origem.id
-            };
-            transacoes.push(novaTransacao);
-            mudancas = true;
-        }
-    });
-
-    if (mudancas) saveData();
-}
-
-function atualizarDashboardFinanceiro() {
-    const mesSelecionado = parseInt(document.getElementById('financeiro-mes').value);
-    const anoSelecionado = parseInt(document.getElementById('financeiro-ano').value);
-    
-    const transacoesMes = transacoes.filter(t => {
-        const d = new Date(t.data + 'T12:00:00');
-        return d.getMonth() === mesSelecionado && d.getFullYear() === anoSelecionado;
-    });
-
-    const entradasPJ = transacoesMes.filter(t => t.conta === 'pj' && t.tipo === 'receita').reduce((sum, t) => sum + t.valor, 0);
-    const saidasPJ = transacoesMes.filter(t => t.conta === 'pj' && t.tipo === 'despesa').reduce((sum, t) => sum + t.valor, 0);
-    
-    const entradasPF = transacoesMes.filter(t => t.conta === 'pf' && t.tipo === 'receita').reduce((sum, t) => sum + t.valor, 0);
-    const saidasPF = transacoesMes.filter(t => t.conta === 'pf' && t.tipo === 'despesa').reduce((sum, t) => sum + t.valor, 0);
-
-    const entradasCaixa = transacoesMes.filter(t => t.conta === 'caixa' && t.tipo === 'receita').reduce((sum, t) => sum + t.valor, 0);
-    const saidasCaixa = transacoesMes.filter(t => t.conta === 'caixa' && t.tipo === 'despesa').reduce((sum, t) => sum + t.valor, 0);
-
-    const totalReceitas = transacoesMes.filter(t => t.tipo === 'receita').reduce((sum, t) => sum + t.valor, 0);
-    const totalDespesas = transacoesMes.filter(t => t.tipo === 'despesa').reduce((sum, t) => sum + t.valor, 0);
-    const saldoGeral = totalReceitas - totalDespesas;
-
-    document.getElementById('dashboard-total-pj').textContent = formatarMoeda(entradasPJ - saidasPJ);
-    document.getElementById('dashboard-total-pf').textContent = formatarMoeda(entradasPF - saidasPF);
-    document.getElementById('dashboard-caixa-empresa').textContent = formatarMoeda(entradasCaixa - saidasCaixa);
-    
-    const elSaldo = document.getElementById('dashboard-saldo-geral');
-    elSaldo.textContent = formatarMoeda(saldoGeral);
-    elSaldo.style.color = saldoGeral >= 0 ? '#2ecc71' : '#e74c3c';
-
-    renderizarTabelaTransacoes(transacoesMes);
-    renderizarGraficoFinanceiro(transacoesMes);
-    renderizarCalendarioFinanceiro(transacoesMes, mesSelecionado, anoSelecionado);
-}
-
-function renderizarTabelaTransacoes(lista) {
-    const tbody = document.querySelector('#transacoes-tabela tbody');
+function renderizarItensManutencao() {
+    const tbody = document.querySelector('#manutencao-itens-tabela tbody');
     tbody.innerHTML = '';
-    
-    lista.sort((a, b) => new Date(a.data) - new Date(b.data));
 
-    if (lista.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Nenhuma movimentação neste mês.</td></tr>';
+    if(currentManutencao.itens.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center">Nenhum serviço adicionado ainda.</td></tr>';
         return;
     }
 
-    lista.forEach(t => {
-        const dataFmt = new Date(t.data + 'T12:00:00').toLocaleDateString('pt-BR');
-        const sinal = t.tipo === 'receita' ? '+' : '-';
-        
-        let acoesHtml = `
-            <button class="btn-editar btn-sm" onclick="openNovaTransacaoModal('${t.tipo}', '${t.id}')"><i class="fas fa-edit"></i></button>
-            <button class="btn-excluir btn-sm" onclick="excluirTransacao('${t.id}')"><i class="fas fa-trash-alt"></i></button>
-        `;
-
-        if (t.status === 'pendente') {
-            acoesHtml = `<button class="btn-secondary btn-sm" onclick="confirmarTransacao('${t.id}')" title="Confirmar"><i class="fas fa-check"></i></button>` + acoesHtml;
-        }
+    currentManutencao.itens.forEach((item, index) => {
+        // Define classe de cor baseada no status
+        let statusClass = "";
+        if(item.status.includes("OK")) statusClass = "status-ok";
+        else if(item.status.includes("Defeito")) statusClass = "status-defeito";
+        else if(item.status.includes("Reparado")) statusClass = "status-reparado";
+        else if(item.status.includes("Substituído")) statusClass = "status-substituido";
+        else statusClass = "status-pendente";
 
         tbody.innerHTML += `
-            <tr style="border-left: 5px solid ${t.tipo === 'receita' ? '#2ecc71' : '#e74c3c'}">
-                <td>${dataFmt}</td>
-                <td>${t.tipo.toUpperCase()}</td>
-                <td>${t.categoria}</td>
-                <td>${t.descricao}</td>
-                <td style="color: ${t.tipo === 'receita' ? '#2ecc71' : '#e74c3c'}"><strong>${sinal} ${formatarMoeda(t.valor)}</strong></td>
-                <td>${t.conta.toUpperCase()}</td>
-                <td><span class="status-badge status-${t.status}">${t.status}</span></td>
-                <td>${acoesHtml}</td>
+            <tr>
+                <td><strong>${item.descricao}</strong></td>
+                <td>
+                    <span class="${statusClass}">${item.status}</span>
+                    ${item.obs ? `<br><small style="color:#aaa;">${item.obs}</small>` : ''}
+                </td>
+                <td>
+                     <button class="btn-excluir btn-sm" onclick="removerItemManutencao(${index})"><i class="fas fa-trash-alt"></i></button>
+                </td>
             </tr>
         `;
     });
 }
 
-function confirmarTransacao(id) {
-    const t = transacoes.find(x => x.id === id);
-    if(t) {
-        t.status = 'pago';
-        saveData();
-        atualizarDashboardFinanceiro();
-    }
+function removerItemManutencao(index) {
+    currentManutencao.itens.splice(index, 1);
+    renderizarItensManutencao();
 }
 
-function excluirTransacao(id) {
-    if(confirm('Excluir esta transação?')) {
-        transacoes = transacoes.filter(t => t.id !== id);
-        saveData();
-        atualizarDashboardFinanceiro();
-    }
+function salvarDadosManutencaoFormulario() {
+    // Captura dados atuais dos inputs para o objeto
+    currentManutencao.clienteId = document.getElementById('manutencao-cliente').value;
+    currentManutencao.data = document.getElementById('manutencao-data').value;
+    currentManutencao.hora = document.getElementById('manutencao-hora').value;
+    currentManutencao.tipo = document.getElementById('manutencao-tipo').value;
 }
 
-function renderizarGraficoFinanceiro(lista) {
-    const ctx = document.getElementById('financeiroChart').getContext('2d');
+function salvarRelatorioManutencao() {
+    salvarDadosManutencaoFormulario();
+
+    if(!currentManutencao.clienteId) { alert("Selecione um cliente."); return; }
+    if(currentManutencao.itens.length === 0) { alert("Adicione pelo menos um serviço/teste."); return; }
+
+    // Salva na lista principal
+    // Gera ID único se for novo
+    if(!currentManutencao.id || currentManutencao.id.includes("undefined")) {
+         currentManutencao.id = Date.now().toString(); 
+    }
+
+    // Verifica se já existe (edição) ou adiciona novo
+    const index = manutencoes.findIndex(m => m.id === currentManutencao.id);
+    if(index !== -1) {
+        manutencoes[index] = {...currentManutencao};
+    } else {
+        manutencoes.push({...currentManutencao});
+    }
+
+    saveData();
+    renderizarRelatoriosSalvos();
     
-    const receitas = lista.filter(t => t.tipo === 'receita');
-    const despesas = lista.filter(t => t.tipo === 'despesa');
-
-    const totalReceitas = receitas.reduce((sum, t) => sum + t.valor, 0);
-    const totalDespesasEmpresa = despesas.filter(t => t.conta !== 'pf').reduce((sum, t) => sum + t.valor, 0);
-    const totalDespesasPF = despesas.filter(t => t.conta === 'pf').reduce((sum, t) => sum + t.valor, 0);
-
-    if (financeiroChartInstance) { financeiroChartInstance.destroy(); }
-
-    financeiroChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['Entradas (Receita)', 'Saídas (Empresa)', 'Saídas (Pessoal)'],
-            datasets: [{
-                label: 'Fluxo Financeiro',
-                data: [totalReceitas, totalDespesasEmpresa, totalDespesasPF],
-                backgroundColor: ['rgba(46, 204, 113, 0.6)', 'rgba(231, 76, 60, 0.6)', 'rgba(156, 39, 176, 0.6)'],
-                borderColor: ['rgba(46, 204, 113, 1)', 'rgba(231, 76, 60, 1)', 'rgba(156, 39, 176, 1)'],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#e0e0e0' } },
-                x: { grid: { display: false }, ticks: { color: '#e0e0e0' } }
-            },
-            plugins: { legend: { labels: { color: '#e0e0e0' } } }
-        }
-    });
+    if(confirm("Relatório salvo! Deseja iniciar um novo?")) {
+        iniciarNovoRelatorioManutencao();
+    }
 }
 
-function renderizarCalendarioFinanceiro(lista, mes, ano) {
-    const container = document.getElementById('fin-calendar-days');
-    container.innerHTML = '';
-    const daysInMonth = new Date(ano, mes + 1, 0).getDate();
+function renderizarRelatoriosSalvos() {
+    const ul = document.getElementById('lista-manutencoes');
+    ul.innerHTML = '';
+    
+    // Ordena por data (mais recente primeiro)
+    manutencoes.sort((a,b) => new Date(b.data) - new Date(a.data));
 
-    for (let day = 1; day <= daysInMonth; day++) {
-        const div = document.createElement('div');
-        div.className = 'fin-day-item';
-        div.textContent = day;
+    manutencoes.forEach(m => {
+        const cliente = clientes.find(c => c.id === m.clienteId);
+        const dataFmt = new Date(m.data).toLocaleDateString('pt-BR');
         
-        const despesasDia = lista.filter(t => {
-            const d = new Date(t.data + 'T12:00:00');
-            return t.tipo === 'despesa' && d.getDate() === day;
-        });
+        ul.innerHTML += `
+            <li>
+                <span>
+                    <i class="fas fa-clipboard-list"></i> ${cliente ? cliente.nome : 'Cliente Desconhecido'} 
+                    <small>(${m.tipo} - ${dataFmt})</small>
+                </span>
+                <div>
+                    <button class="btn-editar" onclick="carregarRelatorioParaEdicao('${m.id}')" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button class="btn-preview" onclick="baixarPdfRelatorioSalvo('${m.id}')" title="PDF"><i class="fas fa-file-pdf"></i></button>
+                    <button class="btn-excluir" onclick="excluirRelatorio('${m.id}')" title="Excluir"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            </li>
+        `;
+    });
+}
 
-        if (despesasDia.length > 0) {
-            div.classList.add('has-event');
-            const temEmpresa = despesasDia.some(t => t.conta !== 'pf');
-            const temPF = despesasDia.some(t => t.conta === 'pf');
-            const dotsDiv = document.createElement('div');
-            dotsDiv.style.marginTop = '5px';
-            if (temEmpresa) dotsDiv.innerHTML += '<span class="dot red"></span>';
-            if (temPF) dotsDiv.innerHTML += '<span class="dot yellow"></span>';
-            div.appendChild(dotsDiv);
-            div.title = `Total dia: ${formatarMoeda(despesasDia.reduce((s,t)=>s+t.valor,0))}`;
-        }
-        container.appendChild(div);
+function carregarRelatorioParaEdicao(id) {
+    const rel = manutencoes.find(m => m.id === id);
+    if(rel) {
+        currentManutencao = {...rel};
+        // Preenche formulário
+        document.getElementById('manutencao-cliente').value = currentManutencao.clienteId;
+        document.getElementById('manutencao-data').value = currentManutencao.data;
+        document.getElementById('manutencao-hora').value = currentManutencao.hora;
+        document.getElementById('manutencao-tipo').value = currentManutencao.tipo;
+        renderizarItensManutencao();
+        // Rola para o topo
+        document.getElementById('manutencao-section').scrollIntoView({behavior: 'smooth'});
     }
 }
 
-// =======================================================
-// ========= GERAR RELATÓRIO FINANCEIRO (PDF) ============
-// =======================================================
-
-async function exportarRelatorioFinanceiroPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    
-    const mesIdx = document.getElementById('financeiro-mes').value;
-    const mesNome = document.getElementById('financeiro-mes').options[document.getElementById('financeiro-mes').selectedIndex].text;
-    const ano = document.getElementById('financeiro-ano').value;
-
-    const transacoesFiltradas = transacoes.filter(t => {
-        const d = new Date(t.data + 'T12:00:00');
-        return d.getMonth() == mesIdx && d.getFullYear() == ano;
-    }).sort((a,b) => new Date(a.data) - new Date(b.data));
-
-    // 1. Calcular Dados para Gráficos
-    // Entradas
-    const entPJ = transacoesFiltradas.filter(t => t.tipo === 'receita' && t.conta === 'pj').reduce((s, t) => s + t.valor, 0);
-    const entPF = transacoesFiltradas.filter(t => t.tipo === 'receita' && t.conta === 'pf').reduce((s, t) => s + t.valor, 0);
-    const entCaixa = transacoesFiltradas.filter(t => t.tipo === 'receita' && t.conta === 'caixa').reduce((s, t) => s + t.valor, 0);
-    
-    // Saídas (Categorias)
-    const despCats = {};
-    transacoesFiltradas.filter(t => t.tipo === 'despesa').forEach(t => {
-        let label = t.categoria;
-        if(label === 'fornecedor') label = 'Fornecedor';
-        else if(label === 'despesa_empresa') label = 'Desp. Empresa';
-        else if(label === 'fixa_pf') label = 'Fixa PF';
-        else if(label === 'variavel_pf') label = 'Var. PF';
-        else if(label === 'transferencia_saida') label = 'Transf. Env.';
-        
-        if(!despCats[label]) despCats[label] = 0;
-        despCats[label] += t.valor;
-    });
-
-    // 2. Gerar Imagens dos Gráficos (Invisíveis)
-    const chartImg1 = await generateChartImage(
-        [entPJ, entPF, entCaixa], 
-        ['PJ', 'PF', 'Caixa Emp.'], 
-        ['#0088cc', '#9c27b0', '#ffd700'], 
-        'doughnut', 
-        'Entradas por Conta'
-    );
-    
-    const chartImg2 = await generateChartImage(
-        Object.values(despCats), 
-        Object.keys(despCats), 
-        ['#e74c3c', '#c0392b', '#d35400', '#e67e22', '#7f8c8d'], 
-        'bar', 
-        'Saídas por Categoria'
-    );
-
-    // 3. Montar PDF
-    doc.setFontSize(22);
-    doc.setTextColor(0, 51, 102);
-    doc.text(`RELATÓRIO FINANCEIRO - ${mesNome}/${ano}`, 14, 20);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`GRUPO HENRI SISTEMAS - Gerado em ${new Date().toLocaleDateString()}`, 14, 28);
-
-    // Inserir Gráficos
-    if(chartImg1) doc.addImage(chartImg1, 'PNG', 15, 35, 80, 80);
-    if(chartImg2) doc.addImage(chartImg2, 'PNG', 105, 35, 90, 80);
-
-    // Resumo Numérico
-    const pj = document.getElementById('dashboard-total-pj').textContent;
-    const pf = document.getElementById('dashboard-total-pf').textContent;
-    const caixa = document.getElementById('dashboard-caixa-empresa').textContent;
-    const saldo = document.getElementById('dashboard-saldo-geral').textContent;
-
-    doc.autoTable({
-        head: [['Resumo do Mês', 'Valor']],
-        body: [['Saldo PJ', pj], ['Saldo PF', pf], ['Caixa Empresa', caixa], ['SALDO GERAL', saldo]],
-        startY: 120, 
-        theme: 'grid',
-        columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
-        headStyles: { fillColor: [0, 51, 102] }
-    });
-
-    // Tabela Detalhada com Cores
-    const rows = transacoesFiltradas.map(t => [
-        new Date(t.data + 'T12:00:00').toLocaleDateString('pt-BR'),
-        t.categoria,
-        t.descricao,
-        t.conta.toUpperCase(),
-        (t.tipo === 'receita' ? '+ ' : '- ') + formatarMoeda(t.valor),
-        t.tipo // Coluna oculta para controle de cor
-    ]);
-
-    doc.text("Detalhamento das Movimentações:", 14, doc.lastAutoTable.finalY + 10);
-    
-    doc.autoTable({
-        head: [['Data', 'Categoria', 'Descrição', 'Conta', 'Valor']],
-        body: rows.map(r => r.slice(0, 5)), // Remove coluna de tipo visualmente
-        startY: doc.lastAutoTable.finalY + 15,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [0, 51, 102] },
-        columnStyles: { 4: { halign: 'right', fontStyle: 'bold' } },
-        didParseCell: function(data) {
-            if (data.section === 'body' && data.column.index === 4) {
-                const tipo = rows[data.row.index][5];
-                if (tipo === 'receita') {
-                    data.cell.styles.textColor = [46, 204, 113]; // Verde
-                } else {
-                    data.cell.styles.textColor = [231, 76, 60]; // Vermelho
-                }
-            }
-        }
-    });
-
-    doc.save(`Relatorio_Financeiro_${mesNome}_${ano}.pdf`);
+function baixarPdfRelatorioSalvo(id) {
+    const rel = manutencoes.find(m => m.id === id);
+    if(rel) {
+        gerarRelatorioPDF(false, rel);
+    }
 }
 
-// Função auxiliar para criar imagem de gráfico off-screen
-function generateChartImage(dataArr, labelsArr, colorsArr, type, title) {
-    return new Promise((resolve) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 400;
-        canvas.height = 400;
-        canvas.style.visibility = 'hidden';
-        document.body.appendChild(canvas);
-
-        const ctx = canvas.getContext('2d');
-        const tempChart = new Chart(ctx, {
-            type: type,
-            data: {
-                labels: labelsArr,
-                datasets: [{
-                    label: title,
-                    data: dataArr,
-                    backgroundColor: colorsArr,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: false,
-                animation: false,
-                plugins: {
-                    legend: { display: true, position: 'bottom' },
-                    title: { display: true, text: title }
-                }
-            }
-        });
-
-        setTimeout(() => {
-            const imgData = canvas.toDataURL('image/png');
-            tempChart.destroy();
-            canvas.remove();
-            resolve(imgData);
-        }, 100);
-    });
+function excluirRelatorio(id) {
+    if(confirm("Excluir este relatório permanentemente?")) {
+        manutencoes = manutencoes.filter(m => m.id !== id);
+        saveData();
+        renderizarRelatoriosSalvos();
+    }
 }

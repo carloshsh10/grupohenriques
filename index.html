@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GRUPO HENRI SISTEMAS - Sistema de Orçamentos</title>
+    <title>GRUPO HENRI SISTEMAS - Gestão Operacional</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f0017">
@@ -92,8 +92,7 @@
         /* Estilos para Modais Responsivos */
         #editOrcamentoModal .modal-content, 
         #novoContratoModal .modal-content,
-        #novaTransacaoModal .modal-content,
-        #novaTransferenciaModal .modal-content {
+        #itemManutencaoModal .modal-content {
             display: flex;
             flex-direction: column;
             width: 80%;
@@ -105,8 +104,7 @@
         }
         #editOrcamentoModal .modal-header,
         #novoContratoModal .modal-header,
-        #novaTransacaoModal .modal-header,
-        #novaTransferenciaModal .modal-header {
+        #itemManutencaoModal .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -124,15 +122,13 @@
         }
         #editOrcamentoModal .modal-body-scrollable,
         #novoContratoModal .modal-body-scrollable,
-        #novaTransacaoModal .modal-body-scrollable,
-        #novaTransferenciaModal .modal-body-scrollable {
+        #itemManutencaoModal .modal-body-scrollable {
             overflow-y: auto; 
             padding: 15px 20px;
         }
         #editOrcamentoModal .modal-footer,
         #novoContratoModal .modal-footer,
-        #novaTransacaoModal .modal-footer,
-        #novaTransferenciaModal .modal-footer {
+        #itemManutencaoModal .modal-footer {
             padding: 15px 20px;
             border-top: 1px solid #e0e0e0;
             flex-shrink: 0; 
@@ -141,8 +137,7 @@
         @media (max-width: 768px) {
             #editOrcamentoModal .modal-content,
             #novoContratoModal .modal-content,
-            #novaTransacaoModal .modal-content,
-            #novaTransferenciaModal .modal-content {
+            #itemManutencaoModal .modal-content {
                 width: 95%; 
                 max-height: 95vh;
             }
@@ -180,7 +175,8 @@
                 font-size: 0.9rem;
             }
             #clientes-tabela th, #clientes-tabela td,
-            #orcamento-itens-tabela th, #orcamento-itens-tabela td {
+            #orcamento-itens-tabela th, #orcamento-itens-tabela td,
+            #manutencao-itens-tabela th, #manutencao-itens-tabela td {
                 padding: 8px;
             }
         }
@@ -192,7 +188,7 @@
             <div class="outer"></div>
             <div class="middle"></div>
             <div class="inner"></div>
-            <div class="icon"><i class="fas fa-lock"></i></div>
+            <div class="icon"><i class="fas fa-shield-alt"></i></div>
             <div class="text" data-text="LOADING"></div>
             <div class="company-name">GRUPO HENRI SISTEMAS</div>
             <div class="tagline">Protegendo o que é seu</div>
@@ -226,7 +222,7 @@
                     <li><a href="#" id="nav-produtos"><i class="fas fa-box-open"></i> Produtos</a></li>
                     <li><a href="#" id="nav-orcamentos"><i class="fas fa-file-invoice-dollar"></i> Orçamentos</a></li>
                     <li><a href="#" id="nav-contratos"><i class="fas fa-file-contract"></i> Contratos</a></li>
-                    <li><a href="#" id="nav-financeiro"><i class="fas fa-chart-line"></i> Financeiro</a></li>
+                    <li><a href="#" id="nav-manutencao"><i class="fas fa-tools"></i> Relatórios</a></li>
                     <li><a href="#" id="nav-backup"><i class="fas fa-cloud-upload-alt"></i> Backup & Restore</a></li>
                 </ul>
             </nav>
@@ -355,6 +351,7 @@
                     <div class="form-actions mb-20">
                         <button id="novo-contrato-btn" class="btn-primary"><i class="fas fa-plus"></i> Novo Contrato</button>
                         <button id="exportar-contratos-pdf-btn" class="btn-secondary"><i class="fas fa-file-pdf"></i> Exportar Lista</button>
+                        <button id="ativar-notificacoes-btn" class="btn-secondary" style="background-color: #e67e22;"><i class="fas fa-bell"></i> Ativar Alertas</button>
                     </div>
 
                     <div id="alertas-reajuste-container" style="display:none;" class="mb-20">
@@ -364,10 +361,10 @@
                         <table id="contratos-tabela">
                             <thead>
                                 <tr>
+                                    <th>Dia Venc.</th>
                                     <th>Cliente</th>
                                     <th>Descrição / Locação</th>
                                     <th>Valor (R$)</th>
-                                    <th>Dia Venc.</th>
                                     <th>Reajuste (Mês)</th>
                                     <th>Status</th>
                                     <th>Ações</th>
@@ -379,73 +376,62 @@
                     </div>
                 </section>
 
-                <section id="financeiro-section">
-                    <h2><i class="fas fa-chart-line"></i> Controle Financeiro</h2>
-                    
-                    <div class="financeiro-dashboard">
-                        <div class="fin-card pj">
-                            <h4><i class="fas fa-building"></i> Total PJ (Mês)</h4>
-                            <p id="dashboard-total-pj">R$ 0,00</p>
+                <section id="manutencao-section">
+                    <h2><i class="fas fa-tools"></i> Relatórios de Manutenção</h2>
+                    <form id="manutencao-form">
+                        <div class="form-group">
+                            <label for="manutencao-cliente">Cliente:</label>
+                            <select id="manutencao-cliente" required>
+                                <option value="">Selecione um cliente...</option>
+                            </select>
                         </div>
-                        <div class="fin-card pf">
-                            <h4><i class="fas fa-user"></i> Total PF (Mês)</h4>
-                            <p id="dashboard-total-pf">R$ 0,00</p>
-                        </div>
-                        <div class="fin-card caixa">
-                            <h4><i class="fas fa-wallet"></i> Caixa Empresa</h4>
-                            <p id="dashboard-caixa-empresa">R$ 0,00</p>
-                        </div>
-                        <div class="fin-card saldo">
-                             <h4><i class="fas fa-balance-scale"></i> Saldo Geral</h4>
-                             <p id="dashboard-saldo-geral">R$ 0,00</p>
-                        </div>
-                    </div>
 
-                    <div class="financeiro-controls mt-20">
-                        <div class="date-filter">
-                            <select id="financeiro-mes"></select>
-                            <select id="financeiro-ano"></select>
-                            <button id="filtrar-financeiro-btn" class="btn-secondary"><i class="fas fa-filter"></i> Filtrar</button>
+                        <div class="form-row" style="display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="manutencao-data">Data da Visita:</label>
+                                <input type="date" id="manutencao-data" required>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="manutencao-hora">Horário:</label>
+                                <input type="time" id="manutencao-hora" required>
+                            </div>
                         </div>
-                        <div class="action-buttons">
-                            <button id="nova-receita-btn" class="btn-faturamento"><i class="fas fa-arrow-up"></i> Receita</button>
-                            <button id="nova-despesa-btn" class="btn-danger"><i class="fas fa-arrow-down"></i> Despesa</button>
-                            <button id="nova-transferencia-btn" class="btn-transferencia"><i class="fas fa-exchange-alt"></i> Transferir</button>
-                            <button id="exportar-financeiro-btn" class="btn-primary"><i class="fas fa-file-invoice-dollar"></i> PDF Analítico</button>
+
+                        <div class="form-group">
+                            <label for="manutencao-tipo">Tipo de Manutenção:</label>
+                            <select id="manutencao-tipo" required>
+                                <option value="Preventiva">Manutenção Preventiva</option>
+                                <option value="Corretiva">Manutenção Corretiva</option>
+                                <option value="Instalação">Instalação Nova</option>
+                                <option value="Visita Técnica">Visita Técnica</option>
+                            </select>
                         </div>
-                    </div>
 
-                    <div class="chart-container mt-20">
-                        <canvas id="financeiroChart"></canvas>
-                    </div>
-
-                    <h3 class="mt-20"><i class="fas fa-calendar-check"></i> Calendário de Despesas</h3>
-                    <div id="financeiro-calendar-container" class="mb-20">
-                        <div id="fin-calendar-days" class="calendar-grid"></div>
-                        <div class="calendar-legend">
-                            <span><span class="dot red"></span> Despesas Empresa</span>
-                            <span><span class="dot yellow"></span> Despesas Pessoais (PF)</span>
+                        <div class="form-actions">
+                            <button type="button" id="adicionar-item-manutencao-btn" class="btn-secondary"><i class="fas fa-plus-circle"></i> Adicionar Serviço/Teste</button>
+                            <button type="button" id="gerar-relatorio-pdf-btn" class="btn-primary"><i class="fas fa-file-pdf"></i> Gerar Relatório PDF</button>
+                            <button type="button" id="salvar-novo-relatorio-btn" class="btn-primary"><i class="fas fa-save"></i> Salvar Relatório</button>
                         </div>
-                    </div>
+                    </form>
 
-                    <h3>Movimentações do Mês</h3>
+                    <h3 class="mt-20">Serviços e Testes Realizados</h3>
                     <div class="table-container">
-                        <table id="transacoes-tabela">
+                        <table id="manutencao-itens-tabela">
                             <thead>
                                 <tr>
-                                    <th>Data</th>
-                                    <th>Tipo</th>
-                                    <th>Categoria</th>
-                                    <th>Descrição</th>
-                                    <th>Valor</th>
-                                    <th>Conta</th>
-                                    <th>Status</th>
+                                    <th>Descrição do Serviço / Teste</th>
+                                    <th>Resultado / Observação</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
-                            <tbody></tbody>
+                            <tbody>
+                                </tbody>
                         </table>
                     </div>
+
+                    <h3 class="mt-20">Relatórios Salvos</h3>
+                    <ul id="lista-manutencoes">
+                    </ul>
                 </section>
 
                 <section id="backup-section">
@@ -473,7 +459,7 @@
         </div>
 
         <footer>
-            <p>&copy; <span id="current-year">2024</span> GRUPO HENRI SISTEMAS - Segurança Eletrônica. Todos os direitos reservados.</p>
+            <p>&copy; <span id="current-year">2026</span> GRUPO HENRI SISTEMAS - Segurança Eletrônica. Todos os direitos reservados.</p>
         </footer>
     </div>
     
@@ -527,6 +513,41 @@
                     <button type="button" id="delete-item-btn" class="btn-danger" style="display: none;"><i class="fas fa-trash-alt"></i> Excluir Item</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div id="itemManutencaoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Adicionar Serviço/Teste</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body-scrollable">
+                <form id="item-manutencao-form">
+                    <div class="form-group">
+                        <label for="manutencao-descricao-servico">Descrição do Serviço ou Teste:</label>
+                        <input type="text" id="manutencao-descricao-servico" placeholder="Ex: Teste de Bateria 12V" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="manutencao-status-servico">Resultado / Observação:</label>
+                        <select id="manutencao-status-servico">
+                            <option value="OK - Funcionando">OK - Funcionando</option>
+                            <option value="Reparado">Reparado</option>
+                            <option value="Substituído">Substituído</option>
+                            <option value="Pendente">Pendente</option>
+                            <option value="Defeito Encontrado">Defeito Encontrado</option>
+                            <option value="Outro">Outro (Especificar abaixo)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="manutencao-obs-extra">Detalhes (Opcional):</label>
+                        <input type="text" id="manutencao-obs-extra" placeholder="Detalhes técnicos...">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="salvar-item-manutencao-btn" class="btn-primary"><i class="fas fa-plus"></i> Adicionar ao Relatório</button>
+            </div>
         </div>
     </div>
     
@@ -663,124 +684,6 @@
             </div>
             <div class="modal-footer">
                 <button type="button" id="salvar-contrato-btn" class="btn-primary"><i class="fas fa-save"></i> Salvar Contrato</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="novaTransacaoModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modal-transacao-titulo">Nova Transação</h3>
-                <span class="close-modal">&times;</span>
-            </div>
-            <div class="modal-body-scrollable">
-                <form id="nova-transacao-form">
-                    <input type="hidden" id="transacao-id">
-                    <input type="hidden" id="transacao-tipo"> <div class="form-group">
-                        <label for="transacao-categoria">Categoria:</label>
-                        <select id="transacao-categoria" required>
-                            </select>
-                    </div>
-
-                    <div class="form-group" id="group-contrato-select" style="display:none;">
-                        <label for="transacao-contrato-id">Contrato Vinculado:</label>
-                        <select id="transacao-contrato-id"></select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="transacao-descricao">Descrição / Detalhes:</label>
-                        <input type="text" id="transacao-descricao" required>
-                    </div>
-
-                    <div class="form-row" style="display: flex; gap: 15px;">
-                        <div class="form-group" style="flex: 1;">
-                            <label for="transacao-valor">Valor (R$):</label>
-                            <input type="number" id="transacao-valor" step="0.01" min="0" required>
-                        </div>
-                        <div class="form-group" style="flex: 1;">
-                            <label for="transacao-data">Data:</label>
-                            <input type="date" id="transacao-data" required>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="transacao-conta">Conta/Destino:</label>
-                        <select id="transacao-conta" required>
-                            <option value="pj">Pessoa Jurídica (PJ)</option>
-                            <option value="pf">Pessoa Física (PF)</option>
-                            <option value="caixa">Caixa Empresa</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="transacao-status">Status:</label>
-                        <select id="transacao-status" required>
-                            <option value="pendente">Pendente / A Receber</option>
-                            <option value="pago">Pago / Recebido</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group" id="group-recorrente" style="border-top: 1px solid #444; padding-top: 10px; margin-top: 10px;">
-                        <label><input type="checkbox" id="transacao-recorrente"> Salvar como Recorrente (Despesa Fixa)</label>
-                        <p style="font-size: 0.8em; color: #aaa;">Se marcado, esta despesa será gerada automaticamente todo mês.</p>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" id="salvar-transacao-btn" class="btn-primary"><i class="fas fa-save"></i> Salvar</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="novaTransferenciaModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Nova Transferência</h3>
-                <span class="close-modal">&times;</span>
-            </div>
-            <div class="modal-body-scrollable">
-                <form id="nova-transferencia-form">
-                    <p style="margin-bottom: 15px; color: #aaa; font-size: 0.9em;">
-                        Transferências criam uma <strong>SAÍDA</strong> na conta de origem e uma <strong>ENTRADA</strong> na conta de destino.
-                    </p>
-                    
-                    <div class="form-row" style="display: flex; gap: 15px;">
-                        <div class="form-group" style="flex: 1;">
-                            <label for="transf-origem">De (Origem):</label>
-                            <select id="transf-origem" required>
-                                <option value="pj">Pessoa Jurídica (PJ)</option>
-                                <option value="pf">Pessoa Física (PF)</option>
-                                <option value="caixa">Caixa Empresa</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="flex: 1;">
-                            <label for="transf-destino">Para (Destino):</label>
-                            <select id="transf-destino" required>
-                                <option value="caixa">Caixa Empresa</option>
-                                <option value="pj">Pessoa Jurídica (PJ)</option>
-                                <option value="pf">Pessoa Física (PF)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="transf-valor">Valor (R$):</label>
-                        <input type="number" id="transf-valor" step="0.01" min="0" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="transf-data">Data:</label>
-                        <input type="date" id="transf-data" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="transf-obs">Observação (Opcional):</label>
-                        <input type="text" id="transf-obs" placeholder="Motivo da transferência">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" id="salvar-transferencia-btn" class="btn-primary"><i class="fas fa-exchange-alt"></i> Confirmar Transferência</button>
             </div>
         </div>
     </div>
