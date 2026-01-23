@@ -1,5 +1,5 @@
-// Define o nome do cache - Atualizado para v5.1
-const CACHE_NAME = 'gh-orcamentos-cache-v5';
+// Define o nome do cache - Atualizado para v5.2
+const CACHE_NAME = 'gh-orcamentos-cache-v5.2';
 
 const urlsToCache = [
     './',
@@ -72,4 +72,5 @@ self.addEventListener('activate', event => {
     })
   );
 });
+
 
