@@ -65,12 +65,11 @@ function gerarPDF(isPreview = false, orcamentoData = null) {
     }
 }
 
-// --- RELATÓRIOS DE MANUTENÇÃO (NOVO) ---
+// --- RELATÓRIOS DE MANUTENÇÃO (ATUALIZADO COM ASSINATURA DIGITAL) ---
 
 function gerarRelatorioPDF(isPreview = false, manutencaoData = null) {
     try {
         // Usa o relatório passado ou o atual da memória
-        // Se currentManutencao não estiver definido no escopo global ainda, trata erro
         let manutencaoParaGerar = manutencaoData;
         if (!manutencaoParaGerar && typeof currentManutencao !== 'undefined') {
             // Pega os dados do formulário se for o atual
@@ -140,24 +139,36 @@ function gerarRelatorioPDF(isPreview = false, manutencaoData = null) {
             }
         });
 
-        y = doc.lastAutoTable.finalY + 20;
+        y = doc.lastAutoTable.finalY + 25;
 
-        // 3. Campo de Assinaturas (Essencial para Manutenção)
+        // 3. Validação Digital Profissional (Substitui Assinatura Física)
         if (y > 250) { doc.addPage(); y = 40; } // Quebra página se necessário
 
-        doc.setLineWidth(0.5);
-        doc.setDrawColor(0, 0, 0);
+        // Caixa de fundo para a validação
+        doc.setFillColor(248, 250, 252); // Fundo muito suave (quase branco/azulado)
+        doc.setDrawColor(200, 200, 200); // Borda cinza claro
+        doc.roundedRect(15, y, 180, 40, 2, 2, 'FD');
 
-        // Assinatura Técnico
-        doc.line(20, y, 90, y);
-        doc.setFontSize(8);
-        doc.text("TÉCNICO RESPONSÁVEL", 55, y + 5, { align: 'center' });
-        doc.text("GRUPO HENRI SISTEMAS", 55, y + 9, { align: 'center' });
+        // Título da Validação
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(0, 51, 102); // Azul da marca
+        doc.text("VALIDAÇÃO TÉCNICA DIGITAL", 105, y + 8, { align: 'center' });
 
-        // Assinatura Cliente
-        doc.line(120, y, 190, y);
-        doc.text("CLIENTE / RESPONSÁVEL", 155, y + 5, { align: 'center' });
-        doc.text(cliente.nome.substring(0, 35), 155, y + 9, { align: 'center' });
+        // Texto Profissional
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(60, 60, 60); // Cinza escuro para leitura
+
+        const textoValidacao = "Atestamos com total credibilidade, respeito e profissionalismo que os serviços descritos neste relatório foram executados sob a responsabilidade técnica de Carlos Henrique, representando a empresa Grupo Henri Sistemas. Este documento digital garante a segurança e a veracidade das informações registradas, dispensando assinatura física para fins de comprovação técnica.";
+        
+        const splitValidacao = doc.splitTextToSize(textoValidacao, 170);
+        doc.text(splitValidacao, 105, y + 16, { align: 'center' });
+
+        // Selo "Assinado Digitalmente" (Texto)
+        doc.setFontSize(7);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')} | ID: ${manutencaoParaGerar.id || 'N/A'}`, 105, y + 36, { align: 'center' });
 
         // Rodapé
         adicionarRodapePremium(doc, 1);
@@ -474,15 +485,30 @@ function adicionarTermosCondicoes(doc) {
 
     const termos = [
         { text: "Prezados,", style: "normal"},
-        { text: "SOBRE O ORÇAMENTO", style: "bold", spaceBefore: 4, spaceAfter: 2.5},
+        { text: "SOBRE O ORÇAMENTO", style: "bold", spaceBefore: 5, spaceAfter: 3},
+        
         { text: "Prazo de Garantia:", style: "bold"},
-        { text: "O Grupo Henri Sistemas oferece garantia de até 3 (três) meses para a execução de todos os serviços prestados, contados a partir da data de conclusão. A garantia dos equipamentos segue os prazos e condições estabelecidos pelos respectivos fabricantes.", style: "normal", spaceAfter: 2.5},
-        { text: "Ressaltamos que o Grupo Henri Sistemas não se responsabiliza por danos oriundos de acidentes, negligência, uso inadequado dos equipamentos, bem como danos decorrentes de eventos fortuitos, força maior ou fenômenos naturais.", style: "normal", spaceAfter: 4},
+        { text: "O Grupo Henri Sistemas oferece garantia de até 3 (três) meses para a execução de todos os serviços prestados, contados a partir da data de conclusão.", style: "normal"},
+        { text: "A garantia dos equipamentos segue os prazos e condições estabelecidos pelos respectivos fabricantes.", style: "normal"},
+        { text: "Os serviços de garantia serão realizados exclusivamente nas dependências localizadas em Angra dos Reis – RJ.", style: "normal", spaceAfter: 3},
+        { text: "Ressaltamos que o Grupo Henri Sistemas não se responsabiliza por danos oriundos de acidentes, negligência, uso inadequado dos equipamentos, bem como danos decorrentes de eventos fortuitos, força maior ou fenômenos naturais, tais como descargas elétricas, raios, vendavais, inundações e desabamentos.", style: "normal", spaceAfter: 5},
+        
         { text: "Duração dos Trabalhos:", style: "bold"},
-        { text: "O prazo para execução será definido em comum acordo com o cliente. Este cronograma pode ser impactado por fatores externos, como: problemas estruturais ou dificuldade de acesso.", style: "normal", spaceAfter: 4},
+        { text: "O prazo para execução será definido em comum acordo com o cliente.", style: "normal"},
+        { text: "Este cronograma pode ser impactado por fatores externos, como: problemas estruturais, dutos obstruídos, postes com estrutura inadequada, dificuldade de acesso aos pontos de distribuição, autorização da Prefeitura Municipal e de órgãos públicos ou privados necessários à execução dos serviços.", style: "normal", spaceAfter: 5},
+        
+        { text: "Observações importantes para execução do serviço:", style: "bold"},
+        { text: "• Acesso livre aos locais de instalação", style: "normal", indent: 5},
+        { text: "• Espaço adequado para acondicionamento dos equipamentos", style: "normal", indent: 5},
+        { text: "• Infraestrutura disponível para passagem dos cabos", style: "normal", indent: 5},
+        { text: "• Ponto de energia com tensão de 127V", style: "normal", indent: 5},
+        { text: "• Acompanhamento de um responsável durante os testes", style: "normal", indent: 5, spaceAfter: 5},
+
         { text: "Início dos Trabalhos:", style: "bold"},
         { text: "• Em até 10 (dez) dias úteis após a confirmação de recebimento e aprovação do orçamento", style: "normal", indent: 5},
-        { text: "• O presente orçamento tem validade de 7 (sete) dias corridos a contar da data de emissão", style: "normal", indent: 5, spaceAfter: 4},
+        { text: "• O presente orçamento tem validade de 7 (sete) dias corridos a contar da data de emissão", style: "normal", indent: 5, spaceAfter: 5},
+        
+        { text: "Estamos confiantes de que entregaremos um trabalho de excelência, caso nos seja confiada a execução do serviço.", style: "normal", spaceBefore: 2},
         { text: "Agradecemos desde já a oportunidade e nos colocamos à disposição para quaisquer esclarecimentos.", style: "normal"}
     ];
     

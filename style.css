@@ -401,6 +401,37 @@ table tbody tr:hover { background-color: rgba(0, 188, 212, 0.05); transition: va
 
 @keyframes slideInModal { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
+/* Fix Específico para Modal de Produtos (Lista Longa) */
+#produtosCategoriaModal .modal-content {
+    max-width: 800px;
+    max-height: 90vh; /* Altura máxima de 90% da tela */
+    display: flex;
+    flex-direction: column;
+}
+
+#produtos-categoria-modal-body {
+    overflow-y: auto; /* Habilita rolagem vertical */
+    flex: 1;
+    margin-top: 15px;
+    padding-right: 5px; /* Espaço para a barra de rolagem */
+}
+
+/* Scrollbar personalizada para o modal */
+#produtos-categoria-modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+#produtos-categoria-modal-body::-webkit-scrollbar-track {
+    background: var(--cor-fundo-secundario); 
+    border-radius: 4px;
+}
+#produtos-categoria-modal-body::-webkit-scrollbar-thumb {
+    background: var(--cor-destaque-primaria); 
+    border-radius: 4px;
+}
+#produtos-categoria-modal-body::-webkit-scrollbar-thumb:hover {
+    background: #00acc1; 
+}
+
 .close-modal {
     color: var(--cor-texto-secundario);
     position: absolute;
