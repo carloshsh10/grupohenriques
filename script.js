@@ -21,7 +21,7 @@ let bancoServicos = [
 ];
 
 let proximoOrcamentoId = 1;
-let proximoRelatorioId = 1; // NOVA VARIÁVEL para numeração sequencial de relatórios
+let proximoRelatorioId = 1; // Variável para numeração sequencial de relatórios
 
 // Objeto temporário para Orçamento
 let currentOrcamento = {
@@ -154,20 +154,34 @@ function configurarEventListeners() {
 }
 
 // =======================================================
-// ========= FIREBASE & DATA HANDLING ====================
+// ========= FIREBASE & DATA HANDLING (CORRIGIDO) ========
 // =======================================================
 
 function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider)
-        .then((result) => {
-            console.log("Logado com sucesso:", result.user);
-        })
-        .catch((error) => {
-            console.error("Erro no login com Google: ", error);
-            updateFirebaseStatus('Erro de Conexão', 'red');
-            alert("Erro ao fazer login com Google: " + error.message);
-        });
+    
+    // Detecção simples de dispositivo móvel
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+        // NO MOBILE: Usa Redirect para evitar bloqueio e erros de conexão
+        firebase.auth().signInWithRedirect(provider);
+    } else {
+        // NO PC: Mantém o Popup
+        firebase.auth().signInWithPopup(provider)
+            .then((result) => {
+                console.log("Logado com sucesso (Popup):", result.user);
+            })
+            .catch((error) => {
+                tratarErroLogin(error);
+            });
+    }
+}
+
+function tratarErroLogin(error) {
+    console.error("Erro no login: ", error);
+    updateFirebaseStatus('Erro de Conexão', 'red');
+    alert("Falha no Login: " + error.message);
 }
 
 function signOutGoogle() {
@@ -180,6 +194,18 @@ function signOutGoogle() {
 }
 
 function setupFirebaseAuthStateListener() {
+    // 1. Verifica se retornou do redirecionamento (Mobile)
+    firebase.auth().getRedirectResult()
+        .then((result) => {
+            if (result.user) {
+                console.log("Retornou do login via Redirecionamento:", result.user);
+            }
+        })
+        .catch((error) => {
+            tratarErroLogin(error);
+        });
+
+    // 2. Listener Padrão de Estado
     firebase.auth().onAuthStateChanged((user) => {
         const loginBtn = document.getElementById('google-login-btn');
         const logoutBtn = document.getElementById('google-logout-btn');
@@ -187,20 +213,24 @@ function setupFirebaseAuthStateListener() {
         if (user) {
             firebaseUser = user;
             updateFirebaseStatus('Conectado', 'green');
-            loginBtn.style.display = 'none';
-            logoutBtn.style.display = 'inline-block';
-            logoutBtn.style.backgroundColor = 'green';
-            logoutBtn.style.borderColor = 'darkgreen';
-            logoutBtn.innerHTML = '<i class="fas fa-check-circle"></i> LOGADO COM FIREBASE CLOUD';
+            if(loginBtn) loginBtn.style.display = 'none';
+            if(logoutBtn) {
+                logoutBtn.style.display = 'inline-block';
+                logoutBtn.style.backgroundColor = 'green';
+                logoutBtn.style.borderColor = 'darkgreen';
+                logoutBtn.innerHTML = '<i class="fas fa-check-circle"></i> LOGADO COM FIREBASE CLOUD';
+            }
             loadDataFromFirestore();
         } else {
             firebaseUser = null;
             updateFirebaseStatus('Desconectado', 'red');
-            loginBtn.style.display = 'inline-block';
-            logoutBtn.style.display = 'none';
-            loginBtn.style.backgroundColor = 'red';
-            loginBtn.style.borderColor = 'darkred';
-            loginBtn.innerHTML = '<i class="fab fa-google"></i> LOGIN GOOGLE NECESSÁRIO';
+            if(loginBtn) {
+                loginBtn.style.display = 'inline-block';
+                loginBtn.style.backgroundColor = 'var(--cor-destaque-secundaria, #db4437)'; // Vermelho/Laranja
+                loginBtn.style.borderColor = 'darkred';
+                loginBtn.innerHTML = '<i class="fab fa-google"></i> LOGIN GOOGLE NECESSÁRIO';
+            }
+            if(logoutBtn) logoutBtn.style.display = 'none';
             loadDataFromLocalStorage();
         }
     });
@@ -236,7 +266,7 @@ function saveDataToFirestore() {
     .catch((error) => {
         console.error("Erro ao salvar dados no Firestore: ", error);
         updateFirebaseStatus('Erro de Conexão', 'red');
-        alert("Erro ao salvar dados no Firebase. Verifique sua conexão.");
+        // Não alerta toda vez para não travar o uso, apenas loga
     });
 }
 
