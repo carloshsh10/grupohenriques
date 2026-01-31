@@ -1,11 +1,10 @@
 // =======================================================
-// ========= SERVICE WORKER - VERSÃO 6.0 (CORRIGIDO) =====
+// ========= SERVICE WORKER - VERSÃO FINAL 8.0 ===========
 // =======================================================
 
-// Define o nome do cache - Atualizado para v6 para forçar atualização
-const CACHE_NAME = 'gh-orcamentos-cache-v6';
+const CACHE_NAME = 'gh-orcamentos-v8-final';
 
-// Lista de arquivos para salvar no celular (Offline)
+// Arquivos que serão salvos para funcionar Offline
 const urlsToCache = [
     './',
     './index.html',
@@ -21,82 +20,81 @@ const urlsToCache = [
     'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js'
 ];
 
-// 1. INSTALAÇÃO: Baixa os arquivos essenciais
+// 1. Instalação do Service Worker
 self.addEventListener('install', event => {
-    self.skipWaiting(); // Força o SW a ativar imediatamente
+    self.skipWaiting(); // Força ativação imediata
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('Cache v6 aberto e arquivos cacheados.');
+                console.log('Cache v8 instalado.');
                 return cache.addAll(urlsToCache);
             })
     );
 });
 
-// 2. INTERCEPTAÇÃO DE REDE (FETCH): O Coração do problema
+// 2. Interceptação de Rede (A CORREÇÃO DO LOGIN ESTÁ AQUI)
 self.addEventListener('fetch', event => {
-    const url = event.request.url;
+    const requestUrl = new URL(event.request.url);
 
-    // --- BLOQUEIO DE CACHE PARA AUTH E BANCO DE DADOS ---
-    // Se a URL for do Google, Firebase ou Autenticação, NÃO cacheia.
-    // Deixa passar direto para a rede. Isso corrige o erro de conexão no mobile.
-    if (url.includes('firestore.googleapis.com') || 
-        url.includes('googleapis.com') || 
-        url.includes('firebaseapp.com') || 
-        url.includes('accounts.google.com') ||
-        url.includes('/auth') ||
-        url.includes('google.com/js')) {
+    // --- LÓGICA DE BYPASS (IGNORAR CACHE) ---
+    // Se a URL tiver parâmetros de busca (como ?code= do Google Auth),
+    // ou for relacionada ao Firebase/Google, ou for uma navegação HTML principal:
+    // NUNCA use o cache. Vá direto para a rede.
+    if (requestUrl.search !== '' || 
+        requestUrl.hostname.includes('firebase') || 
+        requestUrl.hostname.includes('google') ||
+        requestUrl.hostname.includes('gstatic') ||
+        event.request.mode === 'navigate') {
         
-        return; // Sai da função, permitindo conexão direta
+        // Network Only (Sem Cache)
+        event.respondWith(fetch(event.request));
+        return;
     }
 
-    // --- ESTRATÉGIA DE CACHE PADRÃO ---
-    // Tenta pegar do cache primeiro; se não tiver, busca na rede e salva.
+    // --- LÓGICA PADRÃO (Cache First, Network Fallback) ---
+    // Para arquivos estáticos (CSS, JS, Imagens)
     event.respondWith(
         caches.match(event.request)
             .then(response => {
-                // Se encontrou no cache, retorna ele
-                if (response) { return response; }
-
+                // Se achou no cache, retorna
+                if (response) {
+                    return response;
+                }
+                
                 // Se não, busca na rede
-                return fetch(event.request).then(
-                    response => {
-                        // Verifica se a resposta é válida
-                        if(!response || response.status !== 200 || response.type !== 'basic') {
-                            return response;
-                        }
-
-                        // Clona a resposta para salvar no cache
-                        const responseToCache = response.clone();
-
-                        // Abre o cache e salva o novo arquivo (exceto arquivos .json de backup)
-                        caches.open(CACHE_NAME)
-                            .then((cache) => {
-                                if (!event.request.url.endsWith('.json')) {
-                                    cache.put(event.request, responseToCache);
-                                }
-                            });
-
-                        return response;
+                return fetch(event.request).then(networkResponse => {
+                    // Verifica se a resposta é válida antes de cachear
+                    if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+                        return networkResponse;
                     }
-                );
+
+                    // Clona e salva no cache para a próxima vez
+                    const responseToCache = networkResponse.clone();
+                    caches.open(CACHE_NAME).then(cache => {
+                        cache.put(event.request, responseToCache);
+                    });
+
+                    return networkResponse;
+                }).catch(() => {
+                    // Se falhar (ex: sem internet e sem cache), não faz nada (ou poderia retornar uma página de offline)
+                });
             })
     );
 });
 
-// 3. ATIVAÇÃO: Limpa caches antigos (v1, v2, v5...) para liberar espaço
+// 3. Ativação e Limpeza de Caches Antigos
 self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            console.log('Limpando cache antigo:', cacheName);
-            return caches.delete(cacheName);
-          }
+    const cacheWhitelist = [CACHE_NAME];
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheWhitelist.indexOf(cacheName) === -1) {
+                        console.log('Deletando cache antigo:', cacheName);
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
         })
-      );
-    })
-  );
+    );
 });

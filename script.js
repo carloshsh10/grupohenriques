@@ -6,6 +6,7 @@ let produtos = [];
 let orcamentos = [];
 let contratos = [];
 let manutencoes = [];
+
 // Banco de dados de serviços aprendidos
 let bancoServicos = [
     "Teste de Bateria 12V",
@@ -21,7 +22,7 @@ let bancoServicos = [
 ];
 
 let proximoOrcamentoId = 1;
-let proximoRelatorioId = 1; // Variável para numeração sequencial de relatórios
+let proximoRelatorioId = 1;
 
 // Objeto temporário para Orçamento
 let currentOrcamento = {
@@ -36,7 +37,7 @@ let currentOrcamento = {
 
 // Objeto temporário para Relatório de Manutenção
 let currentManutencao = {
-    id: null, // Será gerado sequencialmente ao salvar (ex: 0001)
+    id: null,
     clienteId: "",
     data: "",
     hora: "",
@@ -47,8 +48,6 @@ let currentManutencao = {
 // Controles de Edição
 let isEditingItem = false;
 let editingItemIndex = -1;
-
-// Controles de Edição de Item de Manutenção
 let isEditingManutencaoItem = false;
 let editingManutencaoItemIndex = -1;
 
@@ -137,8 +136,7 @@ function configurarEventListeners() {
     document.getElementById('exportar-contratos-pdf-btn').addEventListener('click', exportarContratosPDF);
     document.getElementById('ativar-notificacoes-btn').addEventListener('click', solicitarPermissaoNotificacao);
 
-    // --- MANUTENÇÃO (ATUALIZADO) ---
-    // Agora passa -1 para indicar novo item
+    // --- MANUTENÇÃO ---
     document.getElementById('adicionar-item-manutencao-btn').addEventListener('click', () => openItemManutencaoModal(-1));
     document.querySelector('#itemManutencaoModal .close-modal').addEventListener('click', () => closeModal('itemManutencaoModal'));
     document.getElementById('salvar-item-manutencao-btn').addEventListener('click', adicionarItemManutencao);
@@ -154,23 +152,22 @@ function configurarEventListeners() {
 }
 
 // =======================================================
-// ========= FIREBASE & DATA HANDLING (CORRIGIDO) ========
+// ========= FIREBASE AUTHENTICATION (CORRIGIDO) =========
 // =======================================================
 
 function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    
-    // Detecção simples de dispositivo móvel
+    // Detecta se é mobile
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     if (isMobile) {
-        // NO MOBILE: Usa Redirect para evitar bloqueio e erros de conexão
+        // Mobile: Redirect (Evita popup bloqueado)
         firebase.auth().signInWithRedirect(provider);
     } else {
-        // NO PC: Mantém o Popup
+        // PC: Popup (Mais elegante)
         firebase.auth().signInWithPopup(provider)
             .then((result) => {
-                console.log("Logado com sucesso (Popup):", result.user);
+                console.log("PC Logado:", result.user);
             })
             .catch((error) => {
                 tratarErroLogin(error);
@@ -186,26 +183,27 @@ function tratarErroLogin(error) {
 
 function signOutGoogle() {
     firebase.auth().signOut().then(() => {
-        console.log("Desconectado com sucesso");
+        alert("Desconectado com sucesso.");
+        window.location.reload();
     }).catch((error) => {
         console.error("Erro no logout: ", error);
-        alert("Erro ao fazer logout: " + error.message);
     });
 }
 
 function setupFirebaseAuthStateListener() {
-    // 1. Verifica se retornou do redirecionamento (Mobile)
+    // 1. CAPTURA O RETORNO DO REDIRECT (ESSENCIAL PARA MOBILE)
     firebase.auth().getRedirectResult()
         .then((result) => {
             if (result.user) {
-                console.log("Retornou do login via Redirecionamento:", result.user);
+                console.log("Retorno do Redirect:", result.user);
+                // O estado será atualizado automaticamente pelo onAuthStateChanged abaixo
             }
         })
         .catch((error) => {
             tratarErroLogin(error);
         });
 
-    // 2. Listener Padrão de Estado
+    // 2. MONITOR DE ESTADO (RODA SEMPRE)
     firebase.auth().onAuthStateChanged((user) => {
         const loginBtn = document.getElementById('google-login-btn');
         const logoutBtn = document.getElementById('google-logout-btn');
@@ -213,39 +211,41 @@ function setupFirebaseAuthStateListener() {
         if (user) {
             firebaseUser = user;
             updateFirebaseStatus('Conectado', 'green');
+            
             if(loginBtn) loginBtn.style.display = 'none';
             if(logoutBtn) {
                 logoutBtn.style.display = 'inline-block';
                 logoutBtn.style.backgroundColor = 'green';
-                logoutBtn.style.borderColor = 'darkgreen';
-                logoutBtn.innerHTML = '<i class="fas fa-check-circle"></i> LOGADO COM FIREBASE CLOUD';
+                logoutBtn.innerHTML = '<i class="fas fa-check-circle"></i> LOGADO: ' + user.displayName.split(' ')[0].toUpperCase();
             }
+            
             loadDataFromFirestore();
         } else {
             firebaseUser = null;
             updateFirebaseStatus('Desconectado', 'red');
+            
             if(loginBtn) {
                 loginBtn.style.display = 'inline-block';
-                loginBtn.style.backgroundColor = 'var(--cor-destaque-secundaria, #db4437)'; // Vermelho/Laranja
-                loginBtn.style.borderColor = 'darkred';
-                loginBtn.innerHTML = '<i class="fab fa-google"></i> LOGIN GOOGLE NECESSÁRIO';
+                loginBtn.innerHTML = '<i class="fab fa-google"></i> LOGIN GOOGLE';
             }
             if(logoutBtn) logoutBtn.style.display = 'none';
+            
             loadDataFromLocalStorage();
         }
     });
 }
 
+// =======================================================
+// ========= LÓGICA DE DADOS (FIRESTORE & LOCAL) =========
+// =======================================================
+
 function saveDataToFirestore() {
     if (!firebaseUser) {
-        console.warn("Usuário não autenticado. Salvando apenas no Local Storage.");
         salvarLocalmenteTudo();
         return;
     }
 
     updateFirebaseStatus('Sincronizando...', 'orange');
-    
-    // Referência ao documento do usuário (versão compat/v8)
     const userDocRef = firebase.firestore().collection('users').doc(firebaseUser.uid);
     
     userDocRef.set({
@@ -256,7 +256,7 @@ function saveDataToFirestore() {
         manutencoes: manutencoes,
         bancoServicos: bancoServicos, 
         proximoOrcamentoId: proximoOrcamentoId,
-        proximoRelatorioId: proximoRelatorioId, // Salva o contador de relatórios
+        proximoRelatorioId: proximoRelatorioId,
         currentOrcamento: currentOrcamento
     })
     .then(() => {
@@ -266,7 +266,6 @@ function saveDataToFirestore() {
     .catch((error) => {
         console.error("Erro ao salvar dados no Firestore: ", error);
         updateFirebaseStatus('Erro de Conexão', 'red');
-        // Não alerta toda vez para não travar o uso, apenas loga
     });
 }
 
@@ -278,7 +277,7 @@ function salvarLocalmenteTudo() {
     salvarNoLocalStorage('manutencoes', manutencoes);
     salvarNoLocalStorage('bancoServicos', bancoServicos);
     salvarNoLocalStorage('proximoOrcamentoId', proximoOrcamentoId);
-    salvarNoLocalStorage('proximoRelatorioId', proximoRelatorioId); // Salva localmente
+    salvarNoLocalStorage('proximoRelatorioId', proximoRelatorioId);
     salvarNoLocalStorage('currentOrcamento', currentOrcamento);
 }
 
@@ -301,7 +300,7 @@ function loadDataFromFirestore() {
             manutencoes = data.manutencoes || [];
             bancoServicos = data.bancoServicos || bancoServicos; 
             proximoOrcamentoId = data.proximoOrcamentoId || 1;
-            proximoRelatorioId = data.proximoRelatorioId || 1; // Carrega o contador
+            proximoRelatorioId = data.proximoRelatorioId || 1;
             currentOrcamento = data.currentOrcamento || { id: generateSequentialId(true), clienteId: null, itens: [], maoDeObra: 0, relatorio: "", formasPagamento: "", servicos: "" };
             updateFirebaseStatus('Conectado', 'green');
         } else {
@@ -309,7 +308,7 @@ function loadDataFromFirestore() {
         }
         carregarDadosIniciais(); 
     }).catch((error) => {
-        console.error("Erro ao carregar dados do Firestore: ", error);
+        console.error("Erro ao carregar do Firestore: ", error);
         updateFirebaseStatus('Erro de Conexão', 'red');
         loadDataFromLocalStorage(); 
     });
@@ -332,7 +331,7 @@ function loadDataFromLocalStorage() {
     }
 
     proximoOrcamentoId = parseInt(localStorage.getItem('proximoOrcamentoId')) || 1;
-    proximoRelatorioId = parseInt(localStorage.getItem('proximoRelatorioId')) || 1; // Carrega local
+    proximoRelatorioId = parseInt(localStorage.getItem('proximoRelatorioId')) || 1;
     
     currentOrcamento = JSON.parse(localStorage.getItem('currentOrcamento')) || {
         id: generateSequentialId(true),
@@ -347,7 +346,7 @@ function saveData() {
         saveDataToFirestore();
     } else {
         salvarLocalmenteTudo();
-        updateFirebaseStatus('Salvo Localmente. Conecte-se para salvar na nuvem.', 'blue');
+        updateFirebaseStatus('Salvo Localmente.', 'blue');
     }
 }
 
@@ -413,7 +412,6 @@ function generateSequentialId(isInitialLoad = false) {
     return id.toString().padStart(4, '0');
 }
 
-// NOVA FUNÇÃO: Gera ID sequencial para relatórios (0001, 0002...)
 function generateSequentialRelatorioId() {
     let id = proximoRelatorioId;
     proximoRelatorioId++;
@@ -478,7 +476,6 @@ function renderizarClientes() {
         card.innerHTML = `
             <h4>${cliente.nome}</h4>
             <p><i class="fas fa-phone"></i> ${cliente.telefone || 'Não informado'}</p>
-            <p><i class="fas fa-map-marker-alt"></i> ${cliente.endereco || 'Não informado'}</p>
         `;
         container.appendChild(card);
     });
@@ -598,7 +595,7 @@ function renderizarProdutosPorCategoria() {
 
 function abrirModalProdutosDaCategoria(categoriaNome, produtosDaCategoria) {
     const modal = document.getElementById('produtosCategoriaModal');
-    document.getElementById('produtos-categoria-modal-title').textContent = `Produtos da Categoria: ${categoriaNome}`;
+    document.getElementById('produtos-categoria-modal-title').textContent = `Categoria: ${categoriaNome}`;
     const modalBody = document.getElementById('produtos-categoria-modal-body');
     if (produtosDaCategoria.length === 0) {
         modalBody.innerHTML = '<p>Nenhum produto nesta categoria.</p>';
@@ -606,14 +603,12 @@ function abrirModalProdutosDaCategoria(categoriaNome, produtosDaCategoria) {
         return;
     }
     const table = document.createElement('table');
-    table.innerHTML = `<thead><tr><th>ID</th><th>Nome Proposta</th><th>Nome Real</th><th>Valor</th><th>Ações</th></tr></thead><tbody></tbody>`;
+    table.innerHTML = `<thead><tr><th>Nome</th><th>Valor</th><th>Ações</th></tr></thead><tbody></tbody>`;
     const tbody = table.querySelector('tbody');
     produtosDaCategoria.forEach((p, index) => {
         tbody.innerHTML += `
             <tr>
-                <td>${(index + 1).toString().padStart(3, '0')}</td>
                 <td>${p.nomeProposta}</td>
-                <td>${p.nomeReal || 'N/A'}</td>
                 <td>${formatarMoeda(p.valor)}</td>
                 <td>
                     <button class="btn-editar btn-sm" onclick="event.stopPropagation(); closeProdutosCategoriaModal(); editarProduto('${p.id}');"><i class="fas fa-edit"></i></button>
@@ -737,7 +732,7 @@ function excluirItemPeloModal() {
     const source = modal.dataset.source;
     const itemIndex = editingItemIndex;
 
-    if (itemIndex > -1 && confirm('Tem certeza que deseja remover este item do orçamento?')) {
+    if (itemIndex > -1 && confirm('Tem certeza que deseja remover este item?')) {
         if (source === 'current') {
             currentOrcamento.itens.splice(itemIndex, 1);
             renderizarItensOrcamento();
@@ -842,9 +837,9 @@ function renderizarOrcamentosSalvos() {
             <li>
                 <span>${cliente ? cliente.nome : 'Cliente Desconhecido'} - ${dataFmt} (Nº: ${orc.id})</span>
                 <div>
-                    <button class="btn-editar" onclick="abrirModalEdicaoOrcamento('${orc.id}')" title="Abrir/Editar"><i class="fas fa-folder-open"></i></button>
+                    <button class="btn-editar" onclick="abrirModalEdicaoOrcamento('${orc.id}')" title="Editar"><i class="fas fa-folder-open"></i></button>
                     <button class="btn-excluir" onclick="iniciarExclusaoOrcamento('${orc.id}')" title="Excluir"><i class="fas fa-trash-alt"></i></button>
-                    <button class="btn-preview" onclick="baixarPdfOrcamento('${orc.id}')" title="Baixar PDF"><i class="fas fa-file-pdf"></i></button>
+                    <button class="btn-preview" onclick="baixarPdfOrcamento('${orc.id}')" title="PDF"><i class="fas fa-file-pdf"></i></button>
                 </div>
             </li>
         `;
@@ -917,7 +912,7 @@ function salvarAlteracoesOrcamentoPeloModal() {
     orcamentos[orcIndex].relatorio = document.getElementById('edit-orcamento-relatorio').value;
     orcamentos[orcIndex].formasPagamento = document.getElementById('edit-orcamento-formas-pagamento').value;
     
-    if(confirm("Gostaria de atualizar a data de emissão para hoje?")) {
+    if(confirm("Atualizar a data de emissão para hoje?")) {
         orcamentos[orcIndex].data = new Date().toISOString();
     }
     
@@ -1070,7 +1065,6 @@ function openNovoContratoModal(contratoId = null) {
     form.reset();
     document.getElementById('contrato-id').value = '';
     
-    // Carrega clientes (ordenados)
     const select = document.getElementById('contrato-cliente');
     select.innerHTML = '<option value="">Selecione um cliente...</option>';
     const clientesOrdenados = [...clientes].sort((a, b) => a.nome.localeCompare(b.nome));
@@ -1144,16 +1138,13 @@ function renderizarContratos() {
         return;
     }
 
-    // 1. Ordenação: Dia de Vencimento (Crescente) -> Nome do Cliente (A-Z)
     contratos.sort((a, b) => {
         if (a.diaVencimento !== b.diaVencimento) {
             return a.diaVencimento - b.diaVencimento;
         }
         const clienteA = clientes.find(c => c.id === a.clienteId);
         const clienteB = clientes.find(c => c.id === b.clienteId);
-        const nomeA = clienteA ? clienteA.nome : "";
-        const nomeB = clienteB ? clienteB.nome : "";
-        return nomeA.localeCompare(nomeB);
+        return (clienteA ? clienteA.nome : "").localeCompare(clienteB ? clienteB.nome : "");
     });
 
     contratos.forEach(c => {
@@ -1187,29 +1178,17 @@ function excluirContrato(id) {
     }
 }
 
-// LÓGICA DE NOTIFICAÇÃO E ALERTAS
 function solicitarPermissaoNotificacao() {
-    if (!("Notification" in window)) {
-        console.log("Este navegador não suporta notificações de desktop");
-        return;
-    }
-
+    if (!("Notification" in window)) return;
     if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-        Notification.requestPermission().then(function (permission) {
-            if (permission === "granted") {
-                new Notification("Grupo Henri Sistemas", {
-                    body: "Notificações ativadas! Você será avisado sobre reajustes de contratos.",
-                    icon: "assets/icone.png"
-                });
-            }
-        });
+        Notification.requestPermission();
     }
 }
 
 function verificarAlertasReajuste() {
     const container = document.getElementById('alertas-reajuste-container');
     container.innerHTML = '';
-    const mesAtual = new Date().getMonth() + 1; // 1-12
+    const mesAtual = new Date().getMonth() + 1;
 
     const contratosReajuste = contratos.filter(c => c.ativo && c.mesReajuste === mesAtual);
 
@@ -1218,8 +1197,6 @@ function verificarAlertasReajuste() {
         contratosReajuste.forEach(c => {
             const cliente = clientes.find(cli => cli.id === c.clienteId);
             const nomeCliente = cliente ? cliente.nome : 'Cliente';
-            
-            // Cria elemento visual
             container.innerHTML += `
                 <div class="alert-box">
                     <i class="fas fa-bell"></i>
@@ -1229,26 +1206,9 @@ function verificarAlertasReajuste() {
                     </div>
                 </div>
             `;
-            
-            // Envia notificação do sistema (Browser Notification)
-            enviarNotificacaoReajuste(nomeCliente);
         });
     } else {
         container.style.display = 'none';
-    }
-}
-
-function enviarNotificacaoReajuste(nomeCliente) {
-    if (Notification.permission === "granted") {
-        // Verifica se já notificamos hoje para não fazer spam (usando sessionStorage)
-        const key = `notified_${nomeCliente}_${new Date().getMonth()}`;
-        if (!sessionStorage.getItem(key)) {
-            new Notification("Lembrete de Reajuste", {
-                body: `O contrato de ${nomeCliente} precisa de reajuste este mês!`,
-                icon: "assets/icone.png"
-            });
-            sessionStorage.setItem(key, "true");
-        }
     }
 }
 
@@ -1266,13 +1226,7 @@ function exportarContratosPDF() {
     const tableColumn = ["Dia Venc.", "Cliente", "Descrição", "Valor", "Reajuste", "Status"];
     const tableRows = [];
 
-    // Usa a mesma ordenação da tela
-    const contratosExport = [...contratos].sort((a, b) => {
-        if (a.diaVencimento !== b.diaVencimento) return a.diaVencimento - b.diaVencimento;
-        const cA = clientes.find(c => c.id === a.clienteId);
-        const cB = clientes.find(c => c.id === b.clienteId);
-        return (cA ? cA.nome : "").localeCompare(cB ? cB.nome : "");
-    });
+    const contratosExport = [...contratos].sort((a, b) => a.diaVencimento - b.diaVencimento);
 
     contratosExport.forEach(c => {
         const cliente = clientes.find(cli => cli.id === c.clienteId);
@@ -1301,11 +1255,10 @@ function exportarContratosPDF() {
 }
 
 // =======================================================
-// ========= RELATÓRIOS DE MANUTENÇÃO (COMPLETO E ATUALIZADO)
+// ========= RELATÓRIOS DE MANUTENÇÃO (COMPLETO) =========
 // =======================================================
 
 function iniciarNovoRelatorioManutencao() {
-    // Reseta objeto temporário, mas NÃO define ID ainda (será gerado ao salvar)
     currentManutencao = {
         id: null, 
         clienteId: "",
@@ -1315,7 +1268,6 @@ function iniciarNovoRelatorioManutencao() {
         itens: [] 
     };
     
-    // Reseta formulário
     document.getElementById('manutencao-cliente').value = "";
     document.getElementById('manutencao-data').value = currentManutencao.data;
     document.getElementById('manutencao-hora').value = currentManutencao.hora;
@@ -1324,14 +1276,12 @@ function iniciarNovoRelatorioManutencao() {
     renderizarItensManutencao();
 }
 
-// Atualizado para aceitar index (para edição)
 function openItemManutencaoModal(index = -1) {
     document.getElementById('item-manutencao-form').reset();
     isEditingManutencaoItem = index > -1;
     editingManutencaoItemIndex = index;
     
     if (isEditingManutencaoItem) {
-        // Preenche o modal com os dados existentes
         const item = currentManutencao.itens[index];
         document.getElementById('manutencao-descricao-servico').value = item.descricao;
         document.getElementById('manutencao-status-servico').value = item.status;
@@ -1344,15 +1294,11 @@ function openItemManutencaoModal(index = -1) {
     openModal('itemManutencaoModal');
 }
 
-// --- FUNÇÃO DE AUTOCOMPLETAR ---
 function atualizarDatalistServicos() {
     const datalist = document.getElementById('lista-sugestoes-servicos');
     if (!datalist) return;
-    
-    datalist.innerHTML = ''; // Limpa anterior
-    // Ordena alfabeticamente para ficar bonito
+    datalist.innerHTML = ''; 
     bancoServicos.sort();
-    
     bancoServicos.forEach(servico => {
         const option = document.createElement('option');
         option.value = servico;
@@ -1360,38 +1306,26 @@ function atualizarDatalistServicos() {
     });
 }
 
-// --- FUNÇÃO ADICIONAR/EDITAR ITEM ---
 function adicionarItemManutencao() {
     const descricaoInput = document.getElementById('manutencao-descricao-servico');
-    const descricao = descricaoInput.value.trim(); // Remove espaços extras
+    const descricao = descricaoInput.value.trim();
     const status = document.getElementById('manutencao-status-servico').value;
     const obs = document.getElementById('manutencao-obs-extra').value;
 
-    if(!descricao) {
-        alert("Descreva o serviço ou teste realizado.");
-        return;
-    }
+    if(!descricao) { alert("Descreva o serviço."); return; }
 
-    // LÓGICA DE APRENDIZADO (BANCO DE DADOS)
     const existe = bancoServicos.some(s => s.toLowerCase() === descricao.toLowerCase());
-    
     if (!existe) {
         bancoServicos.push(descricao);
         atualizarDatalistServicos();
         saveData(); 
     }
 
-    const novoItem = {
-        descricao: descricao,
-        status: status,
-        obs: obs
-    };
+    const novoItem = { descricao: descricao, status: status, obs: obs };
 
     if (isEditingManutencaoItem && editingManutencaoItemIndex > -1) {
-        // Atualiza item existente
         currentManutencao.itens[editingManutencaoItemIndex] = novoItem;
     } else {
-        // Adiciona novo item
         currentManutencao.itens.push(novoItem);
     }
 
@@ -1404,26 +1338,21 @@ function renderizarItensManutencao() {
     tbody.innerHTML = '';
 
     if(currentManutencao.itens.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center">Nenhum serviço adicionado ainda.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center">Nenhum serviço adicionado.</td></tr>';
         return;
     }
 
     currentManutencao.itens.forEach((item, index) => {
-        // Define classe de cor baseada no status
         let statusClass = "";
         if(item.status.includes("OK")) statusClass = "status-ok";
         else if(item.status.includes("Defeito")) statusClass = "status-defeito";
         else if(item.status.includes("Reparado")) statusClass = "status-reparado";
-        else if(item.status.includes("Substituído")) statusClass = "status-substituido";
         else statusClass = "status-pendente";
 
         tbody.innerHTML += `
             <tr>
                 <td><strong>${item.descricao}</strong></td>
-                <td>
-                    <span class="${statusClass}">${item.status}</span>
-                    ${item.obs ? `<br><small style="color:#aaa;">${item.obs}</small>` : ''}
-                </td>
+                <td><span class="${statusClass}">${item.status}</span></td>
                 <td>
                      <button class="btn-editar btn-sm" onclick="openItemManutencaoModal(${index})"><i class="fas fa-edit"></i></button>
                      <button class="btn-excluir btn-sm" onclick="removerItemManutencao(${index})"><i class="fas fa-trash-alt"></i></button>
@@ -1434,14 +1363,13 @@ function renderizarItensManutencao() {
 }
 
 function removerItemManutencao(index) {
-    if(confirm("Remover este item do relatório atual?")) {
+    if(confirm("Remover este item?")) {
         currentManutencao.itens.splice(index, 1);
         renderizarItensManutencao();
     }
 }
 
 function salvarDadosManutencaoFormulario() {
-    // Captura dados atuais dos inputs para o objeto
     currentManutencao.clienteId = document.getElementById('manutencao-cliente').value;
     currentManutencao.data = document.getElementById('manutencao-data').value;
     currentManutencao.hora = document.getElementById('manutencao-hora').value;
@@ -1452,15 +1380,12 @@ function salvarRelatorioManutencao() {
     salvarDadosManutencaoFormulario();
 
     if(!currentManutencao.clienteId) { alert("Selecione um cliente."); return; }
-    if(currentManutencao.itens.length === 0) { alert("Adicione pelo menos um serviço/teste."); return; }
+    if(currentManutencao.itens.length === 0) { alert("Adicione serviços."); return; }
 
-    // Salva na lista principal
-    // Gera ID sequencial (0001) se for novo
     if(!currentManutencao.id) {
          currentManutencao.id = generateSequentialRelatorioId(); 
     }
 
-    // Verifica se já existe (edição) ou adiciona novo
     const index = manutencoes.findIndex(m => m.id === currentManutencao.id);
     if(index !== -1) {
         manutencoes[index] = {...currentManutencao};
@@ -1471,7 +1396,7 @@ function salvarRelatorioManutencao() {
     saveData();
     renderizarRelatoriosSalvos();
     
-    if(confirm(`Relatório Nº ${currentManutencao.id} salvo! Deseja iniciar um novo?`)) {
+    if(confirm(`Relatório Nº ${currentManutencao.id} salvo! Novo?`)) {
         iniciarNovoRelatorioManutencao();
     }
 }
@@ -1480,18 +1405,15 @@ function renderizarRelatoriosSalvos() {
     const ul = document.getElementById('lista-manutencoes');
     ul.innerHTML = '';
     
-    // Ordena por ID (mais recente primeiro - ordem decrescente de criação)
-    // Se preferir data: manutencoes.sort((a,b) => new Date(b.data) - new Date(a.data));
     manutencoes.sort((a, b) => parseInt(b.id) - parseInt(a.id));
 
     manutencoes.forEach(m => {
         const cliente = clientes.find(c => c.id === m.clienteId);
         const dataFmt = new Date(m.data).toLocaleDateString('pt-BR');
         
-        // Estrutura idêntica à de Orçamentos
         ul.innerHTML += `
             <li>
-                <span>${cliente ? cliente.nome : 'Cliente Desconhecido'} - ${dataFmt} (Nº: ${m.id}) - ${m.tipo}</span>
+                <span>${cliente ? cliente.nome : '?'} - ${dataFmt} (Nº: ${m.id})</span>
                 <div>
                     <button class="btn-editar" onclick="carregarRelatorioParaEdicao('${m.id}')" title="Editar"><i class="fas fa-folder-open"></i></button>
                     <button class="btn-excluir" onclick="excluirRelatorio('${m.id}')" title="Excluir"><i class="fas fa-trash-alt"></i></button>
@@ -1506,13 +1428,11 @@ function carregarRelatorioParaEdicao(id) {
     const rel = manutencoes.find(m => m.id === id);
     if(rel) {
         currentManutencao = {...rel};
-        // Preenche formulário
         document.getElementById('manutencao-cliente').value = currentManutencao.clienteId;
         document.getElementById('manutencao-data').value = currentManutencao.data;
         document.getElementById('manutencao-hora').value = currentManutencao.hora;
         document.getElementById('manutencao-tipo').value = currentManutencao.tipo;
         renderizarItensManutencao();
-        // Rola para o topo
         document.getElementById('manutencao-section').scrollIntoView({behavior: 'smooth'});
     }
 }
@@ -1525,11 +1445,10 @@ function baixarPdfRelatorioSalvo(id) {
 }
 
 function excluirRelatorio(id) {
-    if(confirm("Excluir este relatório permanentemente?")) {
+    if(confirm("Excluir relatório?")) {
         manutencoes = manutencoes.filter(m => m.id !== id);
         saveData();
         renderizarRelatoriosSalvos();
-        // Se estava editando o que foi excluído, limpa a tela
         if(currentManutencao.id === id) {
              iniciarNovoRelatorioManutencao();
         }
